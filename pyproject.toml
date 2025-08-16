@@ -3,7 +3,7 @@ requires = ["setuptools >= 77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "noske"
+name = "tax_span_cat"
 version = "1.0.1"
 authors = [
   { name="Isaac Rudnick", email = "48895941+IsaacFigNewton@users.noreply.github.com"},
@@ -36,4 +36,4 @@ include = ["tax_span_cat*"]
 "" = "src"
 
 [tool.setuptools.package-data]
-"noske.patterns" = ["*.json"]
+"tax_span_cat.taxonomies" = ["*.json"]

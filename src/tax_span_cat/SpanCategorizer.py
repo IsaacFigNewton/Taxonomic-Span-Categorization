@@ -48,7 +48,7 @@ class SpanCategorizer:
     def _load_taxonomy_from_path(self,
             file_path: str,
             iters:int = 0
-        ) -> dict:
+        ) -> Dict:
         """Load taxonomy from a JSON file"""
         if iters > 1:
             raise FileNotFoundError(f"Default taxonomy not found at {self.default_taxonomy_path}")
@@ -58,23 +58,21 @@ class SpanCategorizer:
                 return json.load(f)
         except FileNotFoundError:
             print(f"File {file_path} not found. Loading default taxonomy instead.")
-            return self.load_taxonomy_from_path(self.default_taxonomy_path, iters=iters+1)
+            return self._load_taxonomy_from_path(self.default_taxonomy_path, iters=iters+1)
     
 
-    def _embed(self, text: str):
-        embedding = np.array([])
-
+    def _embed(self, text: str) -> np.ndarray:
         # if it's a sentence_transformers embedding model
-        if isinstance(self.embedding_model, SentenceTransformer):
-            return self.embedding_model.encode([text])[0]
+        if hasattr(self.embedding_model, 'encode'):
+            embedding = self.embedding_model.encode([text])[0]
         # if it's a spacy model
-        if isinstance(self.embedding_model, SentenceTransformer):
-            return self.embedding_model(text)
+        else:
+            embedding = self.embedding_model(text).vector
 
-        return normalize(np.array(embedding))
+        return normalize(embedding.reshape(1, -1))[0]
 
 
-    def _embed_taxonomy(self, node: Dict | str) -> Dict[str: Dict]:
+    def _embed_taxonomy(self, node: Dict | str) -> Dict[str, Dict]:
         """Recursively embed a taxonomy's entries"""
 
         # if it's a leaf; ie a text description, synset, or other info
@@ -104,14 +102,15 @@ class SpanCategorizer:
         - the cosine similarity of the best match
         - the index of the best match
         """
-        similarities = list(cosine_similarity(
+        similarities = cosine_similarity(
             np.array([query_vect]),
             np.array(corpus_vects)
-        ))
+        )[0]
         highest_similarity = max(similarities)
+        best_match_idx = np.argmax(similarities)
         return (
             highest_similarity,
-            similarities.index(highest_similarity)
+            best_match_idx
         )
 
 
@@ -136,7 +135,7 @@ class SpanCategorizer:
         # get embeddings of taxonomic terms at the current level
         corpus_vects = [current_node["children"][child]["embedding"] for child in children]
         # get idx of closest match
-        best_match_idx, best_similarity = self._semantic_search(query_vect, corpus_vects)
+        best_similarity, best_match_idx = self._semantic_search(query_vect, corpus_vects)
         # get label of closest match
         best_match_label = children[best_match_idx]
 
