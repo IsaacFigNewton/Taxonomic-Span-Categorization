@@ -40,8 +40,7 @@ categorizer = SpanCategorizer(
 )
 
 # Load spaCy model and add categorizer to pipeline
-nlp = spacy.load("en_core_web_lg")
-nlp.add_pipe("span_categorizer", last=True, config={"categorizer": categorizer})
+nlp = spacy.load("en_core_web_sm")
 
 # Process text
 doc = nlp("Apple Inc. released the new iPhone in California.")
