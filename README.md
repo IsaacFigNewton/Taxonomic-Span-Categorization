@@ -116,7 +116,7 @@ Generate normalized embeddings for input text.
 
 ### Custom Taxonomy
 
-See [TAXONOMY.md](TAXONOMY.md) for detailed examples of creating custom taxonomies.
+See [TAXONOMY.md](docs/TAXONOMY.md) for detailed examples of creating custom taxonomies.
 
 ```python
 # Use custom taxonomy
