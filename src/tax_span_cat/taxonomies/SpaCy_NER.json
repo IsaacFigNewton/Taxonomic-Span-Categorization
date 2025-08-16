@@ -1,95 +1,97 @@
 {
-  "People_and_Groups": {
-    "description": "Entities representing individual people or groups based on nationality, religion, or political affiliation.",
-    "children": {
-      "PERSON": {
-        "description": "People, including fictional"
-      },
-      "NORP": {
-        "description": "Nationalities or religious or political groups"
+  "children": {
+    "People_and_Groups": {
+      "description": "Entities representing individual people or groups based on nationality, religion, or political affiliation.",
+      "children": {
+        "PERSON": {
+          "description": "People, including fictional"
+        },
+        "NORP": {
+          "description": "Nationalities or religious or political groups"
+        }
       }
-    }
-  },
-  "Places": {
-    "description": "Geographical entities, both geopolitical and physical locations.",
-    "children": {
-      "FAC": {
-        "description": "Buildings, airports, highways, bridges, etc."
-      },
-      "GPE": {
-        "description": "Countries, cities, states"
-      },
-      "LOC": {
-        "description": "Non-GPE locations, mountain ranges, bodies of water"
+    },
+    "Places": {
+      "description": "Geographical entities, both geopolitical and physical locations.",
+      "children": {
+        "FAC": {
+          "description": "Buildings, airports, highways, bridges, etc."
+        },
+        "GPE": {
+          "description": "Countries, cities, states"
+        },
+        "LOC": {
+          "description": "Non-GPE locations, mountain ranges, bodies of water"
+        }
       }
-    }
-  },
-  "Organizations": {
-    "description": "Named groups of people formed for a particular purpose, such as companies or institutions.",
-    "children": {
-      "ORG": {
-        "description": "Companies, agencies, institutions, etc."
+    },
+    "Organizations": {
+      "description": "Named groups of people formed for a particular purpose, such as companies or institutions.",
+      "children": {
+        "ORG": {
+          "description": "Companies, agencies, institutions, etc."
+        }
       }
-    }
-  },
-  "Objects_and_Artifacts": {
-    "description": "Physical items, creative works, or official documents.",
-    "children": {
-      "PRODUCT": {
-        "description": "Objects, vehicles, foods, etc. (Not services.)"
-      },
-      "WORK_OF_ART": {
-        "description": "Titles of books, songs, etc."
-      },
-      "LAW": {
-        "description": "Named documents made into laws"
+    },
+    "Objects_and_Artifacts": {
+      "description": "Physical items, creative works, or official documents.",
+      "children": {
+        "PRODUCT": {
+          "description": "Objects, vehicles, foods, etc. (Not services.)"
+        },
+        "WORK_OF_ART": {
+          "description": "Titles of books, songs, etc."
+        },
+        "LAW": {
+          "description": "Named documents made into laws"
+        }
       }
-    }
-  },
-  "Events": {
-    "description": "Named occurrences, such as historical events, natural disasters, or sports competitions.",
-    "children": {
-      "EVENT": {
-        "description": "Named hurricanes, battles, wars, sports events, etc."
+    },
+    "Events": {
+      "description": "Named occurrences, such as historical events, natural disasters, or sports competitions.",
+      "children": {
+        "EVENT": {
+          "description": "Named hurricanes, battles, wars, sports events, etc."
+        }
       }
-    }
-  },
-  "Languages": {
-    "description": "Named human languages, spoken or written.",
-    "children": {
-      "LANGUAGE": {
-        "description": "Any named language"
+    },
+    "Languages": {
+      "description": "Named human languages, spoken or written.",
+      "children": {
+        "LANGUAGE": {
+          "description": "Any named language"
+        }
       }
-    }
-  },
-  "Temporal": {
-    "description": "Time-related entities, including dates and times of day.",
-    "children": {
-      "DATE": {
-        "description": "Absolute or relative dates or periods"
-      },
-      "TIME": {
-        "description": "Times smaller than a day"
+    },
+    "Temporal": {
+      "description": "Time-related entities, including dates and times of day.",
+      "children": {
+        "DATE": {
+          "description": "Absolute or relative dates or periods"
+        },
+        "TIME": {
+          "description": "Times smaller than a day"
+        }
       }
-    }
-  },
-  "Numeric_and_Quantitative": {
-    "description": "Numerical expressions, measurements, and values.",
-    "children": {
-      "PERCENT": {
-        "description": "Percentage, including ”%“"
-      },
-      "MONEY": {
-        "description": "Monetary values, including unit"
-      },
-      "QUANTITY": {
-        "description": "Measurements, as of weight or distance"
-      },
-      "ORDINAL": {
-        "description": "“first”, “second”, etc."
-      },
-      "CARDINAL": {
-        "description": "Numerals that do not fall under another type"
+    },
+    "Numeric_and_Quantitative": {
+      "description": "Numerical expressions, measurements, and values.",
+      "children": {
+        "PERCENT": {
+          "description": "Percentage, including ”%“"
+        },
+        "MONEY": {
+          "description": "Monetary values, including unit"
+        },
+        "QUANTITY": {
+          "description": "Measurements, as of weight or distance"
+        },
+        "ORDINAL": {
+          "description": "“first”, “second”, etc."
+        },
+        "CARDINAL": {
+          "description": "Numerals that do not fall under another type"
+        }
       }
     }
   }
