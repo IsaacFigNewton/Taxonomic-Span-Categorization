@@ -179,6 +179,9 @@ class SpanCategorizer:
             )
             # add the span to the doc's spans and ents
             ner_doc.spans[ent_label].append(span)
-            ner_doc.set_ents(list(ner_doc.ents) + [span])
-        
+            try:
+                ner_doc.set_ents(list(ner_doc.ents) + [span])
+            except Exception as e:
+                print(f"WARNING: {e}")
+
         return ner_doc
