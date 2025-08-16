@@ -314,8 +314,9 @@ class TestSpanCategorizer(unittest.TestCase):
         mock_chunk.end = 4
         mock_doc.noun_chunks = [mock_chunk]
         
-        # Set up spans and set_ents mock
+        # Set up spans, ents, and set_ents mock
         mock_copied_doc.spans = {}
+        mock_copied_doc.ents = []  # Make ents iterable (empty list initially)
         mock_copied_doc.set_ents = Mock()
         
         # Mock sentence transformer
@@ -481,6 +482,7 @@ class TestSpanCategorizer(unittest.TestCase):
                 mock_doc.noun_chunks = [mock_chunk]
                 
                 mock_copied_doc.spans = {}
+                mock_copied_doc.ents = []  # Make ents iterable (empty list initially)
                 mock_copied_doc.set_ents = Mock()
                 
                 with patch.object(categorizer, '_hierarchical_sem_search') as mock_search:

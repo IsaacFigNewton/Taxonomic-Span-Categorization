@@ -179,6 +179,6 @@ class SpanCategorizer:
             )
             # add the span to the doc's spans and ents
             ner_doc.spans[ent_label].append(span)
-            ner_doc.set_ents([span])
+            ner_doc.set_ents(list(ner_doc.ents) + [span])
         
         return ner_doc
