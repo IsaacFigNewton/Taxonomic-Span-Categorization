@@ -87,7 +87,7 @@ class SpanCategorizer:
                 new_node[label] = self._embed_taxonomy(subtree)
                 subtree_centroids.append(new_node[label]["embedding"])
             # centroid = mean of normalized child embeddings
-            new_node["embedding"] = np.mean(np.array(subtree_centroids))
+            new_node["embedding"] = np.mean(np.array(subtree_centroids), axis=0)
             return new_node
         
 
