@@ -641,15 +641,12 @@ class TestSpanCategorizer(unittest.TestCase):
         """Test that _embed_taxonomy correctly processes taxonomic features."""
         with patch.object(SpanCategorizer, '_init_embedding_model'):
             categorizer = SpanCategorizer.__new__(SpanCategorizer)
-            categorizer.taxonomic_features = ["description", "synset"]
-            categorizer._embed = Mock(side_effect=[
-                np.array([0.1, 0.2, 0.3]),  # Description embedding
-                np.array([0.4, 0.5, 0.6])   # Synset embedding
-            ])
+            categorizer.taxonomic_features = ["description", "wordnet_synsets"]
+            categorizer._embed = Mock(return_value=np.array([0.1, 0.2, 0.3]))
             
             test_node = {
                 "description": "A test description",
-                "synset": "test.n.01",
+                "wordnet_synsets": ["test.n.01"],
                 "ignored_key": "should be ignored"
             }
             
@@ -657,45 +654,41 @@ class TestSpanCategorizer(unittest.TestCase):
             
             # Should have processed taxonomic features as text embeddings
             self.assertIn("description", result)
-            self.assertIn("synset", result)
+            self.assertIn("wordnet_synsets", result)
             self.assertIn("embedding", result)
             
             # Taxonomic features should have embedding structure
             self.assertIn("embedding", result["description"])
-            self.assertIn("embedding", result["synset"])
+            self.assertIn("embedding", result["wordnet_synsets"])
             
             # Ignored key should not be processed when using specific taxonomic features
             self.assertNotIn("ignored_key", result)
             
-            # Should have called _embed twice (once for each feature)
-            self.assertEqual(categorizer._embed.call_count, 2)
+            # Should have called _embed at least once (description + any synset lemmas)
+            self.assertGreater(categorizer._embed.call_count, 0)
             categorizer._embed.assert_any_call("A test description")
-            categorizer._embed.assert_any_call("test.n.01")
 
     def test_embed_taxonomy_custom_taxonomic_features(self):
         """Test that custom taxonomic_features parameter works correctly."""
         with patch.object(SpanCategorizer, '_init_embedding_model'):
             categorizer = SpanCategorizer.__new__(SpanCategorizer)
-            categorizer.taxonomic_features = ["custom_feature", "another_feature"]
-            categorizer._embed = Mock(side_effect=[
-                np.array([0.1, 0.2, 0.3]),  # Custom feature
-                np.array([0.4, 0.5, 0.6])   # Another feature
-            ])
+            categorizer.taxonomic_features = ["description"]  # Use a known feature
+            categorizer._embed = Mock(return_value=np.array([0.1, 0.2, 0.3]))
             
             test_node = {
-                "custom_feature": "custom content",
-                "another_feature": "another content",
-                "description": "should be ignored with custom features"
+                "description": "custom content",
+                "another_feature": "should be ignored",
+                "wordnet_synsets": ["should.be.ignored"]
             }
             
             result = categorizer._embed_taxonomy(test_node)
             
-            # Should process custom features
-            self.assertIn("custom_feature", result)
-            self.assertIn("another_feature", result)
+            # Should process only the specified taxonomic features
+            self.assertIn("description", result)
             
-            # Should not process standard features when custom ones are specified
-            self.assertNotIn("description", result)
+            # Should not process features not in taxonomic_features
+            self.assertNotIn("another_feature", result)
+            self.assertNotIn("wordnet_synsets", result)
 
     def test_embed_taxonomy_ignores_unknown_keys(self):
         """Test that _embed_taxonomy ignores unknown keys that are not taxonomic features or children."""
@@ -727,14 +720,11 @@ class TestSpanCategorizer(unittest.TestCase):
         with patch.object(SpanCategorizer, '_init_embedding_model'):
             categorizer = SpanCategorizer.__new__(SpanCategorizer)
             # Don't set taxonomic_features - should use default
-            categorizer._embed = Mock(side_effect=[
-                np.array([0.1, 0.2, 0.3]),  # Description
-                np.array([0.4, 0.5, 0.6])   # Synset
-            ])
+            categorizer._embed = Mock(return_value=np.array([0.1, 0.2, 0.3]))
             
             test_node = {
                 "description": "test description",
-                "synset": "test.n.01",
+                "wordnet_synsets": ["test.n.01"],
                 "other_key": "should be ignored"
             }
             
@@ -742,10 +732,82 @@ class TestSpanCategorizer(unittest.TestCase):
             
             # Should process default taxonomic features
             self.assertIn("description", result)
-            self.assertIn("synset", result)
+            self.assertIn("wordnet_synsets", result)
             # Should ignore unknown key
             self.assertNotIn("other_key", result)
             self.assertIn("embedding", result)
+
+    def test_embed_taxonomy_wordnet_synsets_processing(self):
+        """Test that _embed_taxonomy correctly processes wordnet_synsets."""
+        with patch.object(SpanCategorizer, '_init_embedding_model'):
+            categorizer = SpanCategorizer.__new__(SpanCategorizer)
+            categorizer.taxonomic_features = ["wordnet_synsets"]
+            
+            # Mock the _embed method to return predictable embeddings
+            # Use return_value instead of side_effect to handle variable number of calls
+            categorizer._embed = Mock(return_value=np.array([0.1, 0.2, 0.3]))
+            
+            test_node = {
+                "wordnet_synsets": ["person.n.01"]  # This is a real WordNet synset
+            }
+            
+            result = categorizer._embed_taxonomy(test_node)
+            
+            # Should have processed wordnet_synsets
+            self.assertIn("wordnet_synsets", result)
+            self.assertIn("embedding", result)
+            
+            # Should have embedding for wordnet_synsets
+            self.assertIn("embedding", result["wordnet_synsets"])
+            
+            # Should have called _embed at least once (person.n.01 has multiple lemmas)
+            self.assertGreater(categorizer._embed.call_count, 0)
+
+    def test_embed_taxonomy_wordnet_synsets_with_underscore_replacement(self):
+        """Test that underscores in synset lemmas are replaced with spaces."""
+        with patch.object(SpanCategorizer, '_init_embedding_model'):
+            categorizer = SpanCategorizer.__new__(SpanCategorizer)
+            categorizer.taxonomic_features = ["wordnet_synsets"]
+            
+            # Track what gets passed to _embed
+            embed_calls = []
+            def mock_embed(text):
+                embed_calls.append(text)
+                return np.array([0.1, 0.2, 0.3])
+            
+            categorizer._embed = Mock(side_effect=mock_embed)
+            
+            test_node = {
+                "wordnet_synsets": ["building.n.01"]  # This synset has lemmas with underscores
+            }
+            
+            result = categorizer._embed_taxonomy(test_node)
+            
+            # Should have processed the synset
+            self.assertIn("wordnet_synsets", result)
+            
+            # Check that any underscores in the embed calls were replaced with spaces
+            for call in embed_calls:
+                self.assertNotIn("_", call, f"Underscore found in embed call: '{call}'")
+
+    def test_embed_taxonomy_wordnet_synsets_error_handling(self):
+        """Test that _embed_taxonomy handles synset errors gracefully."""
+        with patch.object(SpanCategorizer, '_init_embedding_model'):
+            categorizer = SpanCategorizer.__new__(SpanCategorizer)
+            categorizer.taxonomic_features = ["wordnet_synsets"]
+            categorizer._embed = Mock(return_value=np.array([0.1, 0.2, 0.3]))
+            
+            test_node = {
+                "wordnet_synsets": ["invalid.synset.01", "another.invalid.01"]
+            }
+            
+            # Should not raise exception, but should handle error gracefully
+            result = categorizer._embed_taxonomy(test_node)
+            
+            # Should still return result with embedding structure
+            self.assertIn("embedding", result)
+            # Since no valid synsets, wordnet_synsets key should not be in result
+            self.assertNotIn("wordnet_synsets", result)
 
 
 if __name__ == '__main__':

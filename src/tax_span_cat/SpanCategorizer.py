@@ -6,6 +6,8 @@ import numpy as np
 from sklearn.preprocessing import normalize
 from sklearn.metrics.pairwise import cosine_similarity
 
+from nltk.corpus import wordnet as wn
+
 import spacy
 from spacy.tokens import Doc, Span
 
@@ -15,7 +17,7 @@ import tax_span_cat.taxonomies
 
 class SpanCategorizer:
     default_taxonomy_path = files(tax_span_cat.taxonomies).joinpath(f"SpaCy_NER.json")
-    default_taxonomic_features = ["description", "synset"]
+    default_taxonomic_features = ["description", "wordnet_synsets"]
 
     def __init__(self,
                  embedding_model: str = "all-MiniLM-L6-v2",
@@ -95,14 +97,43 @@ class SpanCategorizer:
             taxonomic_features = getattr(self, 'taxonomic_features', self.default_taxonomic_features)
             
             for label, subtree in node.items():
+                # Process children
                 if label == "children":
-                    # Process children - recursively embed each child and collect their embeddings
+                    # recursively embed each child and collect their embeddings
                     new_node[label] = self._embed_taxonomy(subtree)
                     subtree_centroids.append(new_node[label]["embedding"])
+                
+                # Process taxonomic features
                 elif label in taxonomic_features:
-                    # Process taxonomic features - embed the text content directly
-                    new_node[label] = {"embedding": self._embed(subtree)}
-                    subtree_centroids.append(new_node[label]["embedding"])
+                    # handle each feature according to its format/structure
+                    match label:
+                        case "wordnet_synsets":
+                            # use nltk.wn to expand each synset in subtree
+                            expanded_synsets = []
+                            for syn in subtree:
+                                try:
+                                    synset = wn.synset(syn)
+                                    lemma_names = [
+                                        str(lemma.name()).replace('_', ' ')
+                                        for lemma in synset.lemmas()
+                                    ]
+                                    expanded_synsets.extend(lemma_names)
+                                except Exception as e:
+                                    print(f"Warning: Could not process synset '{syn}': {e}")
+                            
+                            # embed each synonym and compute centroid
+                            if expanded_synsets:
+                                synset_embeddings = [
+                                    self._embed(synonym)
+                                    for synonym in expanded_synsets
+                                ]
+                                synset_centroid = np.mean(np.array(synset_embeddings), axis=0)
+                                new_node[label] = {"embedding": synset_centroid}
+                                subtree_centroids.append(new_node[label]["embedding"])
+                        case "description":
+                            # embed the text content directly
+                            new_node[label] = {"embedding": self._embed(subtree)}
+                            subtree_centroids.append(new_node[label]["embedding"])
             # centroid = mean of normalized child embeddings
             new_node["embedding"] = np.mean(np.array(subtree_centroids), axis=0)
             return new_node

@@ -4,10 +4,18 @@
       "description": "Entities representing individual people or groups based on nationality, religion, or political affiliation.",
       "children": {
         "PERSON": {
-          "description": "People, including fictional"
+          "description": "People, including fictional",
+          "wordnet_synsets": [
+            "person.n.01"
+          ]
         },
         "NORP": {
-          "description": "Nationalities or religious or political groups"
+          "description": "Nationalities or religious or political groups",
+          "wordnet_synsets": [
+            "nation.n.01",
+            "religious_group.n.01",
+            "political_party.n.01"
+          ]
         }
       }
     },
@@ -15,13 +23,33 @@
       "description": "Geographical entities, both geopolitical and physical locations.",
       "children": {
         "FAC": {
-          "description": "Buildings, airports, highways, bridges, etc."
+          "description": "Buildings, airports, highways, bridges, etc.",
+          "wordnet_synsets": [
+            "building.n.01",
+            "facility.n.01",
+            "airport.n.01",
+            "bridge.n.01",
+            "highway.n.01"
+          ]
         },
         "GPE": {
-          "description": "Countries, cities, states"
+          "description": "Countries, cities, states",
+          "wordnet_synsets": [
+            "country.n.01",
+            "state.n.01",
+            "city.n.01"
+          ]
         },
         "LOC": {
-          "description": "Non-GPE locations, mountain ranges, bodies of water"
+          "description": "Non-GPE locations, mountain ranges, bodies of water",
+          "wordnet_synsets": [
+            "location.n.01",
+            "natural_object.n.01",
+            "mountain_range.n.01",
+            "lake.n.01",
+            "river.n.01",
+            "ocean.n.01"
+          ]
         }
       }
     },
@@ -29,7 +57,13 @@
       "description": "Named groups of people formed for a particular purpose, such as companies or institutions.",
       "children": {
         "ORG": {
-          "description": "Companies, agencies, institutions, etc."
+          "description": "Companies, agencies, institutions, etc.",
+          "wordnet_synsets": [
+            "organization.n.01",
+            "company.n.01",
+            "institution.n.01",
+            "agency.n.01"
+          ]
         }
       }
     },
@@ -37,13 +71,25 @@
       "description": "Physical items, creative works, or official documents.",
       "children": {
         "PRODUCT": {
-          "description": "Objects, vehicles, foods, etc. (Not services.)"
+          "description": "Objects, vehicles, foods, etc. (Not services.)",
+          "wordnet_synsets": [
+            "product.n.02",
+            "artifact.n.01"
+          ]
         },
         "WORK_OF_ART": {
-          "description": "Titles of books, songs, etc."
+          "description": "Titles of books, songs, etc.",
+          "wordnet_synsets": [
+            "work_of_art.n.01",
+            "creative_work.n.01"
+          ]
         },
         "LAW": {
-          "description": "Named documents made into laws"
+          "description": "Named documents made into laws",
+          "wordnet_synsets": [
+            "statute.n.01",
+            "law.n.01"
+          ]
         }
       }
     },
@@ -51,7 +97,14 @@
       "description": "Named occurrences, such as historical events, natural disasters, or sports competitions.",
       "children": {
         "EVENT": {
-          "description": "Named hurricanes, battles, wars, sports events, etc."
+          "description": "Named hurricanes, battles, wars, sports events, etc.",
+          "wordnet_synsets": [
+            "event.n.01",
+            "occurrence.n.01",
+            "disaster.n.01",
+            "competition.n.01",
+            "war.n.01"
+          ]
         }
       }
     },
@@ -59,7 +112,11 @@
       "description": "Named human languages, spoken or written.",
       "children": {
         "LANGUAGE": {
-          "description": "Any named language"
+          "description": "Any named language",
+          "wordnet_synsets": [
+            "language.n.01",
+            "language.n.02"
+          ]
         }
       }
     },
@@ -67,10 +124,20 @@
       "description": "Time-related entities, including dates and times of day.",
       "children": {
         "DATE": {
-          "description": "Absolute or relative dates or periods"
+          "description": "Absolute or relative dates or periods",
+          "wordnet_synsets": [
+            "date.n.06",
+            "time_period.n.01",
+            "period.n.01"
+          ]
         },
         "TIME": {
-          "description": "Times smaller than a day"
+          "description": "Times smaller than a day",
+          "wordnet_synsets": [
+            "time.n.01",
+            "hour.n.01",
+            "minute.n.01"
+          ]
         }
       }
     },
@@ -78,19 +145,35 @@
       "description": "Numerical expressions, measurements, and values.",
       "children": {
         "PERCENT": {
-          "description": "Percentage, including ”%“"
+          "description": "Percentage, including '%'",
+          "wordnet_synsets": [
+            "percent.n.01"
+          ]
         },
         "MONEY": {
-          "description": "Monetary values, including unit"
+          "description": "Monetary values, including unit",
+          "wordnet_synsets": [
+            "money.n.02",
+            "currency.n.01"
+          ]
         },
         "QUANTITY": {
-          "description": "Measurements, as of weight or distance"
+          "description": "Measurements, as of weight or distance",
+          "wordnet_synsets": [
+            "quantity.n.01"
+          ]
         },
         "ORDINAL": {
-          "description": "“first”, “second”, etc."
+          "description": "“first', “second', etc.",
+          "wordnet_synsets": [
+            "ordinal_number.n.01"
+          ]
         },
         "CARDINAL": {
-          "description": "Numerals that do not fall under another type"
+          "description": "Numerals that do not fall under another type",
+          "wordnet_synsets": [
+            "cardinal_number.n.01"
+          ]
         }
       }
     }
