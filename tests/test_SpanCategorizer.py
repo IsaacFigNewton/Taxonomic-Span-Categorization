@@ -186,8 +186,6 @@ class TestSpanCategorizer(unittest.TestCase):
             ], axis=0)
             
             self.assertIn("embedding", result)
-            self.assertIn("child1", result)
-            self.assertIn("child2", result)
             # Check that the result embedding is a numpy array or scalar
             self.assertTrue(isinstance(result["embedding"], (np.ndarray, np.floating, float)))
 
@@ -611,6 +609,143 @@ class TestSpanCategorizer(unittest.TestCase):
                     first_call_args = mock_search.call_args_list[0][0]
                     query_vect, corpus_vects = first_call_args
                     self.assertEqual(len(corpus_vects), 2)  # Animals and Objects, no embedding key
+
+    def test_embed_taxonomy_children_processing(self):
+        """Test that _embed_taxonomy correctly processes 'children' key."""
+        with patch.object(SpanCategorizer, '_init_embedding_model'):
+            categorizer = SpanCategorizer.__new__(SpanCategorizer)
+            categorizer.taxonomic_features = ["description"]
+            
+            test_node = {
+                "children": {
+                    "child1": "desc1",
+                    "child2": "desc2"
+                }
+            }
+            
+            result = categorizer._embed_taxonomy(test_node)
+            
+            # Should have processed children recursively
+            self.assertIn("children", result)
+            self.assertIn("embedding", result)
+            
+            # The children structure should be processed as a subtree, but child1/child2 
+            # are filtered out because they're not in taxonomic_features or "children"
+            children_result = result["children"]
+            self.assertIn("embedding", children_result)
+            # child1 and child2 should NOT be present because they're filtered out
+            self.assertNotIn("child1", children_result)
+            self.assertNotIn("child2", children_result)
+
+    def test_embed_taxonomy_taxonomic_features_processing(self):
+        """Test that _embed_taxonomy correctly processes taxonomic features."""
+        with patch.object(SpanCategorizer, '_init_embedding_model'):
+            categorizer = SpanCategorizer.__new__(SpanCategorizer)
+            categorizer.taxonomic_features = ["description", "synset"]
+            categorizer._embed = Mock(side_effect=[
+                np.array([0.1, 0.2, 0.3]),  # Description embedding
+                np.array([0.4, 0.5, 0.6])   # Synset embedding
+            ])
+            
+            test_node = {
+                "description": "A test description",
+                "synset": "test.n.01",
+                "ignored_key": "should be ignored"
+            }
+            
+            result = categorizer._embed_taxonomy(test_node)
+            
+            # Should have processed taxonomic features as text embeddings
+            self.assertIn("description", result)
+            self.assertIn("synset", result)
+            self.assertIn("embedding", result)
+            
+            # Taxonomic features should have embedding structure
+            self.assertIn("embedding", result["description"])
+            self.assertIn("embedding", result["synset"])
+            
+            # Ignored key should not be processed when using specific taxonomic features
+            self.assertNotIn("ignored_key", result)
+            
+            # Should have called _embed twice (once for each feature)
+            self.assertEqual(categorizer._embed.call_count, 2)
+            categorizer._embed.assert_any_call("A test description")
+            categorizer._embed.assert_any_call("test.n.01")
+
+    def test_embed_taxonomy_custom_taxonomic_features(self):
+        """Test that custom taxonomic_features parameter works correctly."""
+        with patch.object(SpanCategorizer, '_init_embedding_model'):
+            categorizer = SpanCategorizer.__new__(SpanCategorizer)
+            categorizer.taxonomic_features = ["custom_feature", "another_feature"]
+            categorizer._embed = Mock(side_effect=[
+                np.array([0.1, 0.2, 0.3]),  # Custom feature
+                np.array([0.4, 0.5, 0.6])   # Another feature
+            ])
+            
+            test_node = {
+                "custom_feature": "custom content",
+                "another_feature": "another content",
+                "description": "should be ignored with custom features"
+            }
+            
+            result = categorizer._embed_taxonomy(test_node)
+            
+            # Should process custom features
+            self.assertIn("custom_feature", result)
+            self.assertIn("another_feature", result)
+            
+            # Should not process standard features when custom ones are specified
+            self.assertNotIn("description", result)
+
+    def test_embed_taxonomy_ignores_unknown_keys(self):
+        """Test that _embed_taxonomy ignores unknown keys that are not taxonomic features or children."""
+        with patch.object(SpanCategorizer, '_init_embedding_model'):
+            categorizer = SpanCategorizer.__new__(SpanCategorizer)
+            categorizer.taxonomic_features = ["description"]
+            categorizer._embed = Mock(side_effect=[
+                np.array([0.1, 0.2, 0.3])  # Description embedding
+            ])
+            
+            test_node = {
+                "description": "valid feature",
+                "unknown_key1": "should be ignored",
+                "unknown_key2": "should be ignored"
+            }
+            
+            result = categorizer._embed_taxonomy(test_node)
+            
+            # Should process only taxonomic features
+            self.assertIn("description", result)
+            self.assertIn("embedding", result)
+            # Should ignore unknown keys
+            self.assertNotIn("unknown_key1", result)
+            self.assertNotIn("unknown_key2", result)
+
+
+    def test_embed_taxonomy_default_features_fallback(self):
+        """Test that default taxonomic features are used when taxonomic_features is not set."""
+        with patch.object(SpanCategorizer, '_init_embedding_model'):
+            categorizer = SpanCategorizer.__new__(SpanCategorizer)
+            # Don't set taxonomic_features - should use default
+            categorizer._embed = Mock(side_effect=[
+                np.array([0.1, 0.2, 0.3]),  # Description
+                np.array([0.4, 0.5, 0.6])   # Synset
+            ])
+            
+            test_node = {
+                "description": "test description",
+                "synset": "test.n.01",
+                "other_key": "should be ignored"
+            }
+            
+            result = categorizer._embed_taxonomy(test_node)
+            
+            # Should process default taxonomic features
+            self.assertIn("description", result)
+            self.assertIn("synset", result)
+            # Should ignore unknown key
+            self.assertNotIn("other_key", result)
+            self.assertIn("embedding", result)
 
 
 if __name__ == '__main__':

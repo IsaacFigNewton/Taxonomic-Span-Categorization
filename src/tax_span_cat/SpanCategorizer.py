@@ -15,11 +15,18 @@ import tax_span_cat.taxonomies
 
 class SpanCategorizer:
     default_taxonomy_path = files(tax_span_cat.taxonomies).joinpath(f"SpaCy_NER.json")
+    default_taxonomic_features = ["description", "synset"]
 
     def __init__(self,
                  embedding_model: str = "all-MiniLM-L6-v2",
                  taxonomy_path: str|None = None,
-                 threshold: float = 0.5):
+                 threshold: float = 0.5,
+                 taxonomic_features: List[str]|None = None):
+        # taxonomic features to include in taxonomic embeddings
+        if not taxonomic_features:
+            taxonomic_features = self.default_taxonomic_features
+        self.taxonomic_features = taxonomic_features
+
         self._init_embedding_model(embedding_model)
         self._init_taxonomy(taxonomy_path)
         # similarity threshold for assigning a particular label
@@ -83,9 +90,19 @@ class SpanCategorizer:
         else:
             new_node = dict()
             subtree_centroids = list()
+            
+            # Get taxonomic_features with fallback for backward compatibility
+            taxonomic_features = getattr(self, 'taxonomic_features', self.default_taxonomic_features)
+            
             for label, subtree in node.items():
-                new_node[label] = self._embed_taxonomy(subtree)
-                subtree_centroids.append(new_node[label]["embedding"])
+                if label == "children":
+                    # Process children - recursively embed each child and collect their embeddings
+                    new_node[label] = self._embed_taxonomy(subtree)
+                    subtree_centroids.append(new_node[label]["embedding"])
+                elif label in taxonomic_features:
+                    # Process taxonomic features - embed the text content directly
+                    new_node[label] = {"embedding": self._embed(subtree)}
+                    subtree_centroids.append(new_node[label]["embedding"])
             # centroid = mean of normalized child embeddings
             new_node["embedding"] = np.mean(np.array(subtree_centroids), axis=0)
             return new_node
