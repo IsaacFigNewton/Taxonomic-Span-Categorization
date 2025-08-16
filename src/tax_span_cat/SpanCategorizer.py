@@ -74,6 +74,25 @@ class SpanCategorizer:
         return normalize(np.array(embedding))
 
 
+    def _embed_taxonomy(self, node: Dict | str) -> Dict[str: Dict]:
+        """Recursively embed a taxonomy's entries"""
+
+        # if it's a leaf; ie a text description, synset, or other info
+        if isinstance(node, str):
+            return {"embedding": self._embed(node)}
+        
+        # if it's a subtree within the taxonomy
+        else:
+            new_node = dict()
+            subtree_centroids = list()
+            for label, subtree in node.items():
+                new_node[label] = self._embed_taxonomy(subtree)
+                subtree_centroids.append(new_node[label]["embedding"])
+            # centroid = mean of normalized child embeddings
+            new_node["embedding"] = np.mean(np.array(subtree_centroids))
+            return new_node
+        
+
     def _semantic_search(self,
             query_vect: np.ndarray,
             corpus_vects: List[np.ndarray]
@@ -94,25 +113,6 @@ class SpanCategorizer:
             highest_similarity,
             similarities.index(highest_similarity)
         )
-
-
-    def _embed_taxonomy(self, node: Dict | str) -> Dict[str: Dict]:
-        """Recursively embed a taxonomy's entries"""
-
-        # if it's a leaf; ie a text description, synset, or other info
-        if isinstance(node, str):
-            return {"embedding": self._embed(node)}
-        
-        # if it's a subtree within the taxonomy
-        else:
-            new_node = dict()
-            subtree_centroids = list()
-            for label, subtree in node.items():
-                new_node[label] = self._embed_taxonomy(subtree)
-                subtree_centroids.append(new_node[label]["embedding"])
-            # centroid = mean of normalized child embeddings
-            new_node["embedding"] = np.mean(np.array(subtree_centroids))
-            return new_node
 
 
     def _hierarchical_sem_search(self,
