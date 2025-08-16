@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "noske"
+version = "1.0.1"
+authors = [
+  { name="Isaac Rudnick", email = "48895941+IsaacFigNewton@users.noreply.github.com"},
+]
+description = ""
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+  "importlib",
+  "numpy",
+  "pytest",
+  "sentence_transformers",
+  "scikit-learn",
+  "spacy"
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["tax_span_cat*"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.package-data]
+"noske.patterns" = ["*.json"]
