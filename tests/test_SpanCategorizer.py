@@ -371,5 +371,245 @@ class TestSpanCategorizer(unittest.TestCase):
                 self.assertTrue(hasattr(categorizer, 'default_taxonomy_path'))
 
 
+    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
+    def test_default_embedding_model_initialization(self, mock_sentence_transformer):
+        """Test that SpanCategorizer uses default embedding model when none specified."""
+        mock_model = Mock()
+        mock_sentence_transformer.return_value = mock_model
+        
+        with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
+            mock_load.return_value = self.sample_taxonomy
+            with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
+                mock_embed_tax.return_value = self.sample_taxonomy
+                
+                categorizer = SpanCategorizer()
+                
+                mock_sentence_transformer.assert_called_once_with("all-MiniLM-L6-v2")
+                self.assertEqual(categorizer.embedding_model, mock_model)
+
+    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
+    def test_default_threshold_initialization(self, mock_sentence_transformer):
+        """Test that SpanCategorizer uses default threshold when none specified."""
+        mock_sentence_transformer.return_value = Mock()
+        
+        with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
+            mock_load.return_value = self.sample_taxonomy
+            with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
+                mock_embed_tax.return_value = self.sample_taxonomy
+                
+                categorizer = SpanCategorizer()
+                
+                self.assertEqual(categorizer.threshold, 0.5)
+
+    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
+    def test_default_taxonomy_path_initialization(self, mock_sentence_transformer):
+        """Test that SpanCategorizer uses default taxonomy path when none specified."""
+        mock_sentence_transformer.return_value = Mock()
+        
+        with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
+            mock_load.return_value = self.sample_taxonomy
+            with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
+                mock_embed_tax.return_value = self.sample_taxonomy
+                
+                categorizer = SpanCategorizer()
+                
+                mock_load.assert_called_once_with(categorizer.default_taxonomy_path)
+
+    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
+    def test_no_parameters_initialization(self, mock_sentence_transformer):
+        """Test SpanCategorizer initialization with no parameters uses all defaults."""
+        mock_model = Mock()
+        mock_sentence_transformer.return_value = mock_model
+        
+        with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
+            mock_load.return_value = self.sample_taxonomy
+            with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
+                mock_embed_tax.return_value = self.sample_taxonomy
+                
+                categorizer = SpanCategorizer()
+                
+                self.assertEqual(categorizer.threshold, 0.5)
+                self.assertEqual(categorizer.embedding_model, mock_model)
+                mock_sentence_transformer.assert_called_once_with("all-MiniLM-L6-v2")
+                mock_load.assert_called_once_with(categorizer.default_taxonomy_path)
+
+    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
+    def test_call_with_empty_document(self, mock_sentence_transformer):
+        """Test SpanCategorizer behavior with document containing no noun chunks."""
+        mock_sentence_transformer.return_value = Mock()
+        
+        with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
+            mock_load.return_value = self.sample_taxonomy
+            with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
+                mock_embed_tax.return_value = self.sample_taxonomy
+                
+                categorizer = SpanCategorizer()
+                
+                mock_doc = Mock()
+                mock_copied_doc = Mock()
+                mock_doc.copy.return_value = mock_copied_doc
+                mock_doc.noun_chunks = []
+                mock_copied_doc.spans = {}
+                
+                result = categorizer(mock_doc)
+                
+                self.assertEqual(result, mock_copied_doc)
+                self.assertEqual(len(mock_copied_doc.spans), 0)
+
+    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
+    def test_call_with_minimal_document(self, mock_sentence_transformer):
+        """Test SpanCategorizer behavior with minimal document structure."""
+        mock_model = Mock()
+        mock_model.encode.return_value = [np.array([1, 0, 0])]
+        mock_sentence_transformer.return_value = mock_model
+        
+        with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
+            mock_load.return_value = self.sample_taxonomy
+            with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
+                mock_embed_tax.return_value = self.sample_taxonomy
+                
+                categorizer = SpanCategorizer()
+                
+                mock_doc = Mock()
+                mock_copied_doc = Mock()
+                mock_doc.copy.return_value = mock_copied_doc
+                
+                mock_chunk = Mock()
+                mock_chunk.text = "test"
+                mock_chunk.start = 0
+                mock_chunk.end = 1
+                mock_doc.noun_chunks = [mock_chunk]
+                
+                mock_copied_doc.spans = {}
+                mock_copied_doc.set_ents = Mock()
+                
+                with patch.object(categorizer, '_hierarchical_sem_search') as mock_search:
+                    mock_search.return_value = "ENTITY"
+                    
+                    with patch('src.tax_span_cat.SpanCategorizer.Span') as mock_span_class:
+                        mock_span = Mock()
+                        mock_span_class.return_value = mock_span
+                        
+                        result = categorizer(mock_doc)
+                        
+                        self.assertEqual(result, mock_copied_doc)
+                        mock_search.assert_called_once_with(
+                            query="test",
+                            current_label="ENTITY", 
+                            current_node=categorizer.taxonomy
+                        )
+
+    @patch('src.tax_span_cat.SpanCategorizer.spacy.load')
+    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
+    def test_embedding_model_fallback_behavior(self, mock_sentence_transformer, mock_spacy_load):
+        """Test default fallback to SpaCy model when SentenceTransformer initialization fails."""
+        mock_sentence_transformer.side_effect = Exception("SentenceTransformer failed")
+        mock_spacy_model = Mock()
+        mock_spacy_load.return_value = mock_spacy_model
+        
+        with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
+            mock_load.return_value = self.sample_taxonomy
+            with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
+                mock_embed_tax.return_value = self.sample_taxonomy
+                
+                categorizer = SpanCategorizer()
+                
+                mock_spacy_load.assert_called_once_with("en_core_web_lg")
+                self.assertEqual(categorizer.embedding_model, mock_spacy_model)
+
+    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
+    def test_default_entity_label_below_threshold(self, mock_sentence_transformer):
+        """Test that 'ENTITY' label is returned when similarity is below threshold."""
+        mock_model = Mock()
+        mock_model.encode.return_value = [np.array([1, 0, 0])]
+        mock_sentence_transformer.return_value = mock_model
+        
+        with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
+            mock_load.return_value = self.sample_taxonomy
+            with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
+                mock_embed_tax.return_value = self.sample_taxonomy
+                
+                categorizer = SpanCategorizer(threshold=0.9)
+                
+                categorizer.taxonomy = {
+                    "children": {
+                        "Animals": {
+                            "embedding": np.array([0.1, 0.9, 0]),
+                            "children": {}
+                        }
+                    }
+                }
+                
+                with patch.object(categorizer, '_semantic_search') as mock_search:
+                    mock_search.return_value = (0.1, 0)
+                    
+                    result = categorizer._hierarchical_sem_search(
+                        query="unrelated text",
+                        current_label="ENTITY",
+                        current_node=categorizer.taxonomy
+                    )
+                    
+                    self.assertEqual(result, "ENTITY")
+
+    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
+    def test_hierarchical_search_filters_embedding_key(self, mock_sentence_transformer):
+        """Test that the hierarchical search properly filters out 'embedding' keys from children."""
+        mock_model = Mock()
+        mock_model.encode.return_value = [np.array([1, 0, 0])]
+        mock_sentence_transformer.return_value = mock_model
+        
+        with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
+            mock_load.return_value = self.sample_taxonomy
+            with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
+                mock_embed_tax.return_value = self.sample_taxonomy
+                
+                categorizer = SpanCategorizer()
+                
+                # Create a taxonomy structure that mimics what _embed_taxonomy produces
+                # (with 'embedding' keys mixed in with actual children)
+                categorizer.taxonomy = {
+                    "children": {
+                        "Animals": {
+                            "embedding": np.array([0.8, 0.2, 0]),
+                            "children": {
+                                "DOG": {
+                                    "embedding": np.array([0.7, 0.3, 0]),
+                                    "children": {}
+                                },
+                                "embedding": np.array([0.75, 0.25, 0])  # This should be filtered out
+                            }
+                        },
+                        "Objects": {
+                            "embedding": np.array([0.3, 0.7, 0]),
+                            "children": {
+                                "embedding": np.array([0.3, 0.7, 0])  # This should be filtered out
+                            }
+                        },
+                        "embedding": np.array([0.55, 0.45, 0])  # This should be filtered out
+                    }
+                }
+                
+                with patch.object(categorizer, '_semantic_search') as mock_search:
+                    # First call returns high similarity with Animals, second call returns DOG
+                    mock_search.side_effect = [(0.8, 0), (0.8, 0)]  # High similarity for both levels
+                    
+                    result = categorizer._hierarchical_sem_search(
+                        query="dog",
+                        current_label="ENTITY",
+                        current_node=categorizer.taxonomy
+                    )
+                    
+                    # Should find DOG (leaf node) after drilling down through Animals
+                    self.assertEqual(result, "DOG")
+                    
+                    # Verify _semantic_search was called twice (once for top level, once for Animals level)
+                    self.assertEqual(mock_search.call_count, 2)
+                    
+                    # Check that the first call had 2 corpus vectors (Animals, Objects) not 3 (which would include 'embedding')
+                    first_call_args = mock_search.call_args_list[0][0]
+                    query_vect, corpus_vects = first_call_args
+                    self.assertEqual(len(corpus_vects), 2)  # Animals and Objects, no embedding key
+
+
 if __name__ == '__main__':
     unittest.main()

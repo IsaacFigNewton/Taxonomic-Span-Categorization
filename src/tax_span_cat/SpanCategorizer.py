@@ -128,8 +128,13 @@ class SpanCategorizer:
         if "children" not in current_node.keys():
             raise KeyError(f"'children' were missing from the current node being checked, '{current_label}'.")
 
-        # get an ordered list of the labelled embeddings
-        children = list(current_node["children"].keys())
+        # get an ordered list of the labelled embeddings (excluding the embedding key itself)
+        children = [key for key in current_node["children"].keys() if key != "embedding"]
+        
+        # if there are no valid children (only embedding keys), return current label
+        if not children:
+            return current_label
+            
         # get query embedding
         query_vect = self._embed(query)
         # get embeddings of taxonomic terms at the current level
