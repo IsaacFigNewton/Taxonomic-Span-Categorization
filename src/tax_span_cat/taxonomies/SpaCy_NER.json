@@ -1,179 +1,264 @@
 {
-  "children": {
-    "People_and_Groups": {
-      "description": "Entities representing individual people or groups based on nationality, religion, or political affiliation.",
-      "children": {
-        "PERSON": {
-          "description": "People, including fictional",
-          "wordnet_synsets": [
-            "person.n.01"
-          ]
-        },
-        "NORP": {
-          "description": "Nationalities or religious or political groups",
-          "wordnet_synsets": [
-            "nation.n.01",
-            "religious_group.n.01",
-            "political_party.n.01"
-          ]
+  "abstraction.n.06": {
+    "label": "Abstract_Concepts",
+    "children": {
+      "measure.n.02": {
+        "label": "Measurements_and_Quantities",
+        "children": {
+          "quantity.n.01": {
+            "label": "Physical_Quantities",
+            "children": {
+              "measurement.n.01": {
+                "label": "QUANTITY"
+              }
+            }
+          },
+          "number.n.02": {
+            "label": "Numerical_Values",
+            "children": {
+              "cardinal_number.n.01": {
+                "label": "CARDINAL"
+              },
+              "ordinal_number.n.01": {
+                "label": "ORDINAL"
+              },
+              "percent.n.01": {
+                "label": "PERCENT"
+              }
+            }
+          },
+          "money.n.02": {
+            "label": "Monetary_Values",
+            "children": {
+              "currency.n.01": {
+                "label": "MONEY"
+              }
+            }
+          }
+        }
+      },
+      "time.n.01": {
+        "label": "Temporal_Entities",
+        "children": {
+          "date.n.06": {
+            "label": "Dates_and_Periods",
+            "children": {
+              "time_period.n.01": {
+                "label": "DATE"
+              }
+            }
+          },
+          "time_unit.n.01": {
+            "label": "Time_Units",
+            "children": {
+              "hour.n.01": {
+                "label": "TIME"
+              }
+            }
+          }
         }
       }
-    },
-    "Places": {
-      "description": "Geographical entities, both geopolitical and physical locations.",
-      "children": {
-        "FAC": {
-          "description": "Buildings, airports, highways, bridges, etc.",
-          "wordnet_synsets": [
-            "building.n.01",
-            "facility.n.01",
-            "airport.n.01",
-            "bridge.n.01",
-            "highway.n.01"
-          ]
-        },
-        "GPE": {
-          "description": "Countries, cities, states",
-          "wordnet_synsets": [
-            "country.n.01",
-            "state.n.01",
-            "city.n.01"
-          ]
-        },
-        "LOC": {
-          "description": "Non-GPE locations, mountain ranges, bodies of water",
-          "wordnet_synsets": [
-            "location.n.01",
-            "natural_object.n.01",
-            "mountain_range.n.01",
-            "lake.n.01",
-            "river.n.01",
-            "ocean.n.01"
-          ]
+    }
+  },
+  "physical_entity.n.01": {
+    "label": "Physical_Entities",
+    "children": {
+      "object.n.01": {
+        "label": "Objects_and_Artifacts",
+        "children": {
+          "artifact.n.01": {
+            "label": "Human_Made_Objects",
+            "children": {
+              "product.n.02": {
+                "label": "PRODUCT"
+              }
+            }
+          },
+          "creative_work.n.01": {
+            "label": "Creative_Works",
+            "children": {
+              "work_of_art.n.01": {
+                "label": "WORK_OF_ART"
+              }
+            }
+          },
+          "document.n.01": {
+            "label": "Documents",
+            "children": {
+              "law.n.01": {
+                "label": "Legal_Documents",
+                "children": {
+                  "statute.n.01": {
+                    "label": "LAW"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "location.n.01": {
+        "label": "Locations_and_Places",
+        "children": {
+          "geographical_area.n.01": {
+            "label": "Geopolitical_Entities",
+            "children": {
+              "country.n.01": {
+                "label": "Countries"
+              },
+              "state.n.01": {
+                "label": "States"
+              },
+              "city.n.01": {
+                "label": "Cities"
+              },
+              "administrative_district.n.01": {
+                "label": "GPE"
+              }
+            }
+          },
+          "natural_object.n.01": {
+            "label": "Natural_Locations",
+            "children": {
+              "geological_formation.n.01": {
+                "label": "Geographic_Features",
+                "children": {
+                  "mountain_range.n.01": {
+                    "label": "Mountain_Ranges"
+                  }
+                }
+              },
+              "body_of_water.n.01": {
+                "label": "Bodies_of_Water",
+                "children": {
+                  "lake.n.01": {
+                    "label": "Lakes"
+                  },
+                  "river.n.01": {
+                    "label": "Rivers"
+                  },
+                  "ocean.n.01": {
+                    "label": "Oceans"
+                  }
+                }
+              },
+              "natural_location.n.01": {
+                "label": "LOC"
+              }
+            }
+          },
+          "facility.n.01": {
+            "label": "Built_Facilities",
+            "children": {
+              "building.n.01": {
+                "label": "Buildings"
+              },
+              "airport.n.01": {
+                "label": "Airports"
+              },
+              "bridge.n.01": {
+                "label": "Bridges"
+              },
+              "highway.n.01": {
+                "label": "Highways"
+              },
+              "structure.n.01": {
+                "label": "FAC"
+              }
+            }
+          }
+        }
+      },
+      "causal_agent.n.01": {
+        "label": "Agents_and_Actors",
+        "children": {
+          "person.n.01": {
+            "label": "Individual_People",
+            "children": {
+              "individual.n.01": {
+                "label": "PERSON"
+              }
+            }
+          },
+          "social_group.n.01": {
+            "label": "Social_Groups",
+            "children": {
+              "organization.n.01": {
+                "label": "Formal_Organizations",
+                "children": {
+                  "company.n.01": {
+                    "label": "Companies"
+                  },
+                  "institution.n.01": {
+                    "label": "Institutions"
+                  },
+                  "agency.n.01": {
+                    "label": "Agencies"
+                  },
+                  "corporate_body.n.01": {
+                    "label": "ORG"
+                  }
+                }
+              },
+              "people.n.01": {
+                "label": "Groups_by_Identity",
+                "children": {
+                  "nation.n.01": {
+                    "label": "Nationalities"
+                  },
+                  "religious_group.n.01": {
+                    "label": "Religious_Groups"
+                  },
+                  "political_party.n.01": {
+                    "label": "Political_Groups"
+                  },
+                  "group.n.01": {
+                    "label": "NORP"
+                  }
+                }
+              }
+            }
+          }
         }
       }
-    },
-    "Organizations": {
-      "description": "Named groups of people formed for a particular purpose, such as companies or institutions.",
-      "children": {
-        "ORG": {
-          "description": "Companies, agencies, institutions, etc.",
-          "wordnet_synsets": [
-            "organization.n.01",
-            "company.n.01",
-            "institution.n.01",
-            "agency.n.01"
-          ]
+    }
+  },
+  "psychological_feature.n.01": {
+    "label": "Mental_and_Social_Phenomena",
+    "children": {
+      "event.n.01": {
+        "label": "Events_and_Occurrences",
+        "children": {
+          "occurrence.n.01": {
+            "label": "Named_Events",
+            "children": {
+              "disaster.n.01": {
+                "label": "Natural_Disasters"
+              },
+              "competition.n.01": {
+                "label": "Competitions"
+              },
+              "war.n.01": {
+                "label": "Conflicts"
+              },
+              "happening.n.01": {
+                "label": "EVENT"
+              }
+            }
+          }
         }
       }
-    },
-    "Objects_and_Artifacts": {
-      "description": "Physical items, creative works, or official documents.",
-      "children": {
-        "PRODUCT": {
-          "description": "Objects, vehicles, foods, etc. (Not services.)",
-          "wordnet_synsets": [
-            "product.n.02",
-            "artifact.n.01"
-          ]
-        },
-        "WORK_OF_ART": {
-          "description": "Titles of books, songs, etc.",
-          "wordnet_synsets": [
-            "work_of_art.n.01",
-            "creative_work.n.01"
-          ]
-        },
-        "LAW": {
-          "description": "Named documents made into laws",
-          "wordnet_synsets": [
-            "statute.n.01",
-            "law.n.01"
-          ]
-        }
-      }
-    },
-    "Events": {
-      "description": "Named occurrences, such as historical events, natural disasters, or sports competitions.",
-      "children": {
-        "EVENT": {
-          "description": "Named hurricanes, battles, wars, sports events, etc.",
-          "wordnet_synsets": [
-            "event.n.01",
-            "occurrence.n.01",
-            "disaster.n.01",
-            "competition.n.01",
-            "war.n.01"
-          ]
-        }
-      }
-    },
-    "Languages": {
-      "description": "Named human languages, spoken or written.",
-      "children": {
-        "LANGUAGE": {
-          "description": "Any named language",
-          "wordnet_synsets": [
-            "language.n.01",
-            "language.n.02"
-          ]
-        }
-      }
-    },
-    "Temporal": {
-      "description": "Time-related entities, including dates and times of day.",
-      "children": {
-        "DATE": {
-          "description": "Absolute or relative dates or periods",
-          "wordnet_synsets": [
-            "date.n.06",
-            "time_period.n.01",
-            "period.n.01"
-          ]
-        },
-        "TIME": {
-          "description": "Times smaller than a day",
-          "wordnet_synsets": [
-            "time.n.01",
-            "hour.n.01",
-            "minute.n.01"
-          ]
-        }
-      }
-    },
-    "Numeric_and_Quantitative": {
-      "description": "Numerical expressions, measurements, and values.",
-      "children": {
-        "PERCENT": {
-          "description": "Percentage, including '%'",
-          "wordnet_synsets": [
-            "percent.n.01"
-          ]
-        },
-        "MONEY": {
-          "description": "Monetary values, including unit",
-          "wordnet_synsets": [
-            "money.n.02",
-            "currency.n.01"
-          ]
-        },
-        "QUANTITY": {
-          "description": "Measurements, as of weight or distance",
-          "wordnet_synsets": [
-            "quantity.n.01"
-          ]
-        },
-        "ORDINAL": {
-          "description": "“first', “second', etc.",
-          "wordnet_synsets": [
-            "ordinal_number.n.01"
-          ]
-        },
-        "CARDINAL": {
-          "description": "Numerals that do not fall under another type",
-          "wordnet_synsets": [
-            "cardinal_number.n.01"
-          ]
+    }
+  },
+  "communication.n.01": {
+    "label": "Communication_Systems",
+    "children": {
+      "language.n.01": {
+        "label": "Human_Languages",
+        "children": {
+          "natural_language.n.01": {
+            "label": "LANGUAGE"
+          }
         }
       }
     }
