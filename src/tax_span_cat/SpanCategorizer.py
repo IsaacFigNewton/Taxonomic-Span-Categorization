@@ -1,5 +1,5 @@
 from importlib.resources import files
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 import json
 import numpy as np
 
@@ -21,7 +21,8 @@ class SpanCategorizer:
 
     def __init__(self,
                  embedding_model: str = "all-MiniLM-L6-v2",
-                 taxonomy_path: str|None = None,
+                 taxonomy: Optional[Dict] = None,
+                 taxonomy_path: Optional[str] = None,
                  threshold: float = 0.5,
                  taxonomic_features: List[str]|None = None):
         # taxonomic features to include in taxonomic embeddings
@@ -30,7 +31,7 @@ class SpanCategorizer:
         self.taxonomic_features = taxonomic_features
 
         self._init_embedding_model(embedding_model)
-        self._init_taxonomy(taxonomy_path)
+        self._init_taxonomy(taxonomy, taxonomy_path)
         # similarity threshold for assigning a particular label
         self.threshold = threshold
     
@@ -44,12 +45,16 @@ class SpanCategorizer:
             self.embedding_model = spacy.load("en_core_web_lg")
     
 
-    def _init_taxonomy(self, taxonomy_path: str|None):
+    def _init_taxonomy(self, taxonomy: Optional[Dict], taxonomy_path: Optional[str]):
         """Initialize the embedding taxonomy"""
-        if not taxonomy_path:
-            taxonomy_path = self.default_taxonomy_path
-        # load the taxonomy
-        self.taxonomy = self._load_taxonomy_from_path(taxonomy_path)
+        if taxonomy:
+            self.taxonomy = taxonomy
+        elif taxonomy_path:
+            # load the taxonomy from the provided path
+            self.taxonomy = self._load_taxonomy_from_path(taxonomy_path)
+        else:
+            # load the taxonomy from the default path
+            self.taxonomy = self._load_taxonomy_from_path(self.default_taxonomy_path)
         # embed the taxonomy's entries
         self.taxonomy = self._embed_taxonomy(self.taxonomy)
 

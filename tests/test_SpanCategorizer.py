@@ -815,6 +815,57 @@ class TestSpanCategorizer(unittest.TestCase):
             # Since no valid synsets, wordnet_synsets key should not be in result
             self.assertNotIn("wordnet_synsets", result)
 
+    def test_taxonomic_features_fallback_when_missing_attribute(self):
+        """Test that _embed_taxonomy uses default taxonomic features when attribute is missing."""
+        with patch.object(SpanCategorizer, '_init_embedding_model'):
+            categorizer = SpanCategorizer.__new__(SpanCategorizer)
+            # Intentionally don't set taxonomic_features attribute
+            categorizer._embed = Mock(return_value=np.array([0.1, 0.2, 0.3]))
+            
+            test_node = {
+                "description": "test description",
+                "wordnet_synsets": ["test.n.01"],
+                "unknown_feature": "should be ignored"
+            }
+            
+            result = categorizer._embed_taxonomy(test_node)
+            
+            # Should use default taxonomic features
+            self.assertIn("description", result)
+            self.assertIn("wordnet_synsets", result)
+            # Should ignore unknown feature
+            self.assertNotIn("unknown_feature", result)
+            self.assertIn("embedding", result)
+
+    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
+    def test_custom_taxonomic_features_initialization(self, mock_sentence_transformer):
+        """Test that custom taxonomic_features parameter is properly set during initialization."""
+        mock_sentence_transformer.return_value = Mock()
+        
+        with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
+            mock_load.return_value = self.sample_taxonomy
+            with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
+                mock_embed_tax.return_value = self.sample_taxonomy
+                
+                custom_features = ["description"]
+                categorizer = SpanCategorizer(taxonomic_features=custom_features)
+                
+                self.assertEqual(categorizer.taxonomic_features, custom_features)
+
+    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
+    def test_default_taxonomic_features_when_none_provided(self, mock_sentence_transformer):
+        """Test that default taxonomic features are used when None is provided."""
+        mock_sentence_transformer.return_value = Mock()
+        
+        with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
+            mock_load.return_value = self.sample_taxonomy
+            with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
+                mock_embed_tax.return_value = self.sample_taxonomy
+                
+                categorizer = SpanCategorizer(taxonomic_features=None)
+                
+                self.assertEqual(categorizer.taxonomic_features, SpanCategorizer.default_taxonomic_features)
+
 
 if __name__ == '__main__':
     unittest.main()
