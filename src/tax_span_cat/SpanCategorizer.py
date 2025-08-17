@@ -127,7 +127,11 @@ class SpanCategorizer:
                 if label == "children":
                     # recursively embed each child and collect their embeddings
                     new_node[label] = self._embed_taxonomy(subtree)
-                    subtree_centroids.append(new_node[label]["embedding"])
+                    # Children is a dictionary of child nodes, each with their own embedding
+                    # Collect embeddings from all child nodes
+                    for child_name, child_node in new_node[label].items():
+                        if isinstance(child_node, dict) and "embedding" in child_node:
+                            subtree_centroids.append(child_node["embedding"])
                 
                 # Process taxonomic features
                 elif label in taxonomic_features:
@@ -161,7 +165,25 @@ class SpanCategorizer:
                             new_node[label] = {"embedding": self._embed(subtree)}
                             subtree_centroids.append(new_node[label]["embedding"])
             # centroid = mean of normalized child embeddings
-            new_node["embedding"] = np.mean(np.array(subtree_centroids), axis=0)
+            if subtree_centroids:
+                new_node["embedding"] = np.mean(np.array(subtree_centroids), axis=0)
+            else:
+                # If no embeddings available, create a zero vector
+                # This should be rare but handles edge cases like root-only nodes
+                embedding_dim = 384  # Default dimension for all-MiniLM-L6-v2
+                try:
+                    if hasattr(self.embedding_model, 'get_sentence_embedding_dimension'):
+                        dim = self.embedding_model.get_sentence_embedding_dimension()
+                        if isinstance(dim, int):
+                            embedding_dim = dim
+                    elif hasattr(self.embedding_model, 'vector_size'):
+                        dim = self.embedding_model.vector_size
+                        if isinstance(dim, int):
+                            embedding_dim = dim
+                except:
+                    # Fallback to default if anything goes wrong
+                    pass
+                new_node["embedding"] = np.zeros(embedding_dim)
             return new_node
         
 
