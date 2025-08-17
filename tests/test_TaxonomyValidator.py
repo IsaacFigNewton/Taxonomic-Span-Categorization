@@ -19,31 +19,35 @@ class TestTaxonomyValidator(unittest.TestCase):
         
         # Valid taxonomy structures for testing
         self.valid_simple_taxonomy = {
-            "animal.n.01": {
-                "label": "ANIMAL",
-                "description": "A living creature"
+            "children": {
+                "animal.n.01": {
+                    "label": "ANIMAL",
+                    "description": "A living creature"
+                }
             }
         }
         
         self.valid_complex_taxonomy = {
-            "animal.n.01": {
-                "label": "ANIMAL", 
-                "description": "A living creature",
-                "children": {
-                    "dog.n.01": {
-                        "label": "DOG",
-                        "description": "A domesticated canine",
-                        "wordnet_synsets": ["dog.n.01", "domestic_dog.n.01"]
-                    },
-                    "cat.n.01": {
-                        "label": "CAT",
-                        "description": "A domesticated feline"
+            "children": {
+                "animal.n.01": {
+                    "label": "ANIMAL", 
+                    "description": "A living creature",
+                    "children": {
+                        "dog.n.01": {
+                            "label": "DOG",
+                            "description": "A domesticated canine",
+                            "wordnet_synsets": ["dog.n.01", "domestic_dog.n.01"]
+                        },
+                        "cat.n.01": {
+                            "label": "CAT",
+                            "description": "A domesticated feline"
+                        }
                     }
+                },
+                "person.n.01": {
+                    "label": "PERSON",
+                    "description": "A human being"
                 }
-            },
-            "person.n.01": {
-                "label": "PERSON",
-                "description": "A human being"
             }
         }
     
@@ -296,7 +300,9 @@ class TestTaxonomyValidator(unittest.TestCase):
         node2["children"]["node1"] = node1  # Circular reference
         
         circular_taxonomy = {
-            "node1": node1
+            "children": {
+                "node1": node1
+            }
         }
         
         result = self.validator.validate_taxonomy(circular_taxonomy)
@@ -371,15 +377,17 @@ class TestTaxonomyValidator(unittest.TestCase):
     def test_validate_taxonomy_deep_nesting(self):
         """Test validation of deeply nested taxonomy."""
         deep_taxonomy = {
-            "level1": {
-                "label": "LEVEL1",
-                "children": {
-                    "level2": {
-                        "label": "LEVEL2",
-                        "children": {
-                            "level3": {
-                                "label": "LEVEL3",
-                                "description": "Deep level"
+            "children": {
+                "level1": {
+                    "label": "LEVEL1",
+                    "children": {
+                        "level2": {
+                            "label": "LEVEL2",
+                            "children": {
+                                "level3": {
+                                    "label": "LEVEL3",
+                                    "description": "Deep level"
+                                }
                             }
                         }
                     }
@@ -395,13 +403,15 @@ class TestTaxonomyValidator(unittest.TestCase):
     def test_validate_taxonomy_mixed_valid_invalid(self):
         """Test validation of taxonomy with both valid and invalid nodes."""
         mixed_taxonomy = {
-            "valid_node": {
-                "label": "VALID",
-                "description": "A valid node"
-            },
-            "invalid_node": {
-                "label": "",  # Invalid empty label
-                "description": 123  # Invalid description type
+            "children": {
+                "valid_node": {
+                    "label": "VALID",
+                    "description": "A valid node"
+                },
+                "invalid_node": {
+                    "label": "",  # Invalid empty label
+                    "description": 123  # Invalid description type
+                }
             }
         }
         
@@ -419,8 +429,12 @@ class TestTaxonomyValidator(unittest.TestCase):
         custom_validator = TaxonomyValidator(taxonomic_features=["description", "custom_field"])
         
         node_with_custom = {
-            "label": "TEST",
-            "custom_field": "custom value"
+            "children": {
+                "test.n.01": {
+                    "label": "TEST",
+                    "custom_field": "custom value"
+                }
+            }
         }
         
         # Should not warn about missing taxonomic features since custom_field is present
@@ -429,9 +443,11 @@ class TestTaxonomyValidator(unittest.TestCase):
         
         # Test with missing custom features - wrap in proper taxonomy structure
         taxonomy_without_custom_features = {
-            "test_node": {
-                "label": "TEST"
-                # No taxonomic features
+            "children": {
+                "test_node": {
+                    "label": "TEST"
+                    # No taxonomic features
+                }
             }
         }
         
@@ -445,12 +461,14 @@ class TestTaxonomyValidator(unittest.TestCase):
     def test_validation_error_paths(self):
         """Test that validation errors include correct paths."""
         nested_invalid = {
-            "parent": {
-                "label": "PARENT",
-                "children": {
-                    "child": {
-                        "label": "",  # Invalid
-                        "wordnet_synsets": ["invalid.synset.999"]  # Invalid
+            "children": {
+                "parent": {
+                    "label": "PARENT",
+                    "children": {
+                        "child": {
+                            "label": "",  # Invalid
+                            "wordnet_synsets": ["invalid.synset.999"]  # Invalid
+                        }
                     }
                 }
             }
@@ -461,19 +479,21 @@ class TestTaxonomyValidator(unittest.TestCase):
         
         # Check that paths are correctly reported
         paths = [e.path for e in result.errors]
-        self.assertTrue(any("root.parent.children.child" in path for path in paths))
+        self.assertTrue(any("root.children.parent.children.child" in path for path in paths))
     
     def test_embedded_taxonomy_compatibility(self):
         """Test that validator handles embedded taxonomies (with embedding keys)."""
         embedded_taxonomy = {
-            "animal.n.01": {
-                "label": "ANIMAL",
-                "description": "A living creature",
-                "embedding": [0.1, 0.2, 0.3],  # Should be ignored/allowed
-                "children": {
-                    "dog.n.01": {
-                        "label": "DOG",
-                        "embedding": [0.4, 0.5, 0.6]  # Should be ignored/allowed
+            "children": {
+                "animal.n.01": {
+                    "label": "ANIMAL",
+                    "description": "A living creature",
+                    "embedding": [0.1, 0.2, 0.3],  # Should be ignored/allowed
+                    "children": {
+                        "dog.n.01": {
+                            "label": "DOG",
+                            "embedding": [0.4, 0.5, 0.6]  # Should be ignored/allowed
+                        }
                     }
                 }
             }

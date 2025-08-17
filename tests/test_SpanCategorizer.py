@@ -17,27 +17,29 @@ class TestSpanCategorizer(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method."""
         self.sample_taxonomy = {
-            "causal_agent.n.01": {
-                "label": "Animals",
-                "description": "Living creatures",
-                "children": {
-                    "dog.n.01": {
-                        "label": "DOG",
-                        "description": "Canine animals"
-                    },
-                    "cat.n.01": {
-                        "label": "CAT",
-                        "description": "Feline animals" 
+            "children": {
+                "causal_agent.n.01": {
+                    "label": "Animals",
+                    "description": "Living creatures",
+                    "children": {
+                        "dog.n.01": {
+                            "label": "DOG",
+                            "description": "Canine animals"
+                        },
+                        "cat.n.01": {
+                            "label": "CAT",
+                            "description": "Feline animals" 
+                        }
                     }
-                }
-            },
-            "physical_entity.n.01": {
-                "label": "Objects",
-                "description": "Inanimate things",
-                "children": {
-                    "tool.n.01": {
-                        "label": "TOOL",
-                        "description": "Instruments for work"
+                },
+                "physical_entity.n.01": {
+                    "label": "Objects",
+                    "description": "Inanimate things",
+                    "children": {
+                        "tool.n.01": {
+                            "label": "TOOL",
+                            "description": "Instruments for work"
+                        }
                     }
                 }
             }
@@ -618,14 +620,26 @@ class TestSpanCategorizer(unittest.TestCase):
 
     def test_embed_taxonomy_children_processing(self):
         """Test that _embed_taxonomy correctly processes 'children' key."""
-        with patch.object(SpanCategorizer, '_init_embedding_model'):
+        with patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer') as mock_st:
+            mock_model = Mock()
+            mock_model.encode.return_value = [np.array([0.1, 0.2, 0.3])]
+            mock_st.return_value = mock_model
+            
             categorizer = SpanCategorizer.__new__(SpanCategorizer)
             categorizer.taxonomic_features = ["description"]
+            categorizer.embedding_model = mock_model
             
+            # Use proper child node structure instead of strings
             test_node = {
                 "children": {
-                    "child1": "desc1",
-                    "child2": "desc2"
+                    "child1.n.01": {
+                        "label": "CHILD1",
+                        "description": "First child description"
+                    },
+                    "child2.n.01": {
+                        "label": "CHILD2", 
+                        "description": "Second child description"
+                    }
                 }
             }
             
@@ -635,13 +649,14 @@ class TestSpanCategorizer(unittest.TestCase):
             self.assertIn("children", result)
             self.assertIn("embedding", result)
             
-            # The children structure should be processed as a subtree, but child1/child2 
-            # are filtered out because they're not in taxonomic_features or "children"
+            # Children should be processed and included
             children_result = result["children"]
-            self.assertIn("embedding", children_result)
-            # child1 and child2 should NOT be present because they're filtered out
-            self.assertNotIn("child1", children_result)
-            self.assertNotIn("child2", children_result)
+            self.assertIn("child1.n.01", children_result)
+            self.assertIn("child2.n.01", children_result)
+            
+            # Each child should have an embedding
+            self.assertIn("embedding", children_result["child1.n.01"])
+            self.assertIn("embedding", children_result["child2.n.01"])
 
     def test_embed_taxonomy_taxonomic_features_processing(self):
         """Test that _embed_taxonomy correctly processes taxonomic features."""
@@ -1028,9 +1043,11 @@ class TestSpanCategorizer(unittest.TestCase):
         """Test that taxonomy validation occurs during initialization."""
         # Test that invalid taxonomy is rejected
         invalid_taxonomy = {
-            "invalid_node": {
-                "label": "",  # Invalid empty label
-                "description": 123  # Invalid description type
+            "children": {
+                "invalid_node": {
+                    "label": "",  # Invalid empty label
+                    "description": 123  # Invalid description type
+                }
             }
         }
         
@@ -1050,13 +1067,15 @@ class TestSpanCategorizer(unittest.TestCase):
     def test_taxonomy_validation_accepts_valid_taxonomy(self):
         """Test that valid taxonomy passes validation."""
         valid_taxonomy = {
-            "animal.n.01": {
-                "label": "ANIMAL",
-                "description": "A living creature",
-                "children": {
-                    "dog.n.01": {
-                        "label": "DOG", 
-                        "description": "A domesticated canine"
+            "children": {
+                "animal.n.01": {
+                    "label": "ANIMAL",
+                    "description": "A living creature",
+                    "children": {
+                        "dog.n.01": {
+                            "label": "DOG", 
+                            "description": "A domesticated canine"
+                        }
                     }
                 }
             }
@@ -1074,6 +1093,240 @@ class TestSpanCategorizer(unittest.TestCase):
                 self.assertIsNotNone(categorizer.taxonomy)
             except Exception as e:
                 self.fail(f"Valid taxonomy was rejected: {e}")
+
+    def test_embeddings_not_all_zeros_simple_taxonomy(self):
+        """Test that embeddings are not all zeros for a simple taxonomy structure."""
+        # Use wrapped structure to avoid filtering issues
+        simple_taxonomy = {
+            "children": {
+                "animal.n.01": {
+                    "label": "ANIMAL",
+                    "description": "A living creature",
+                    "children": {
+                        "dog.n.01": {
+                            "label": "DOG",
+                            "description": "A domesticated canine"
+                        }
+                    }
+                }
+            }
+        }
+        
+        with patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer') as mock_st:
+            mock_model = Mock()
+            # Create non-zero embedding
+            mock_model.encode.return_value = [np.array([0.1, 0.2, 0.3, 0.4] * 96)]  # 384 dims
+            mock_st.return_value = mock_model
+            
+            categorizer = SpanCategorizer(taxonomy=simple_taxonomy)
+            
+            # Check root level embeddings
+            animal_node = categorizer.taxonomy["children"]["animal.n.01"]
+            self.assertIn("embedding", animal_node)
+            root_embedding = animal_node["embedding"]
+            self.assertFalse(np.allclose(root_embedding, 0), 
+                           "Root node embedding should not be all zeros")
+            
+            # Check leaf node embeddings
+            leaf_node = animal_node["children"]["dog.n.01"]
+            self.assertIn("embedding", leaf_node)
+            leaf_embedding = leaf_node["embedding"]
+            self.assertFalse(np.allclose(leaf_embedding, 0), 
+                           "Leaf node embedding should not be all zeros")
+            
+            # Check description embeddings
+            self.assertIn("description", leaf_node)
+            self.assertIn("embedding", leaf_node["description"])
+            desc_embedding = leaf_node["description"]["embedding"]
+            self.assertFalse(np.allclose(desc_embedding, 0), 
+                           "Description embedding should not be all zeros")
+
+    def test_embeddings_not_all_zeros_wrapped_taxonomy(self):
+        """Test that embeddings are not all zeros for a wrapped taxonomy structure."""
+        wrapped_taxonomy = {
+            "children": {
+                "animal.n.01": {
+                    "label": "ANIMAL",
+                    "description": "A living creature",
+                    "children": {
+                        "dog.n.01": {
+                            "label": "DOG",
+                            "description": "A domesticated canine"
+                        }
+                    }
+                }
+            }
+        }
+        
+        with patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer') as mock_st:
+            mock_model = Mock()
+            # Create non-zero embedding
+            mock_model.encode.return_value = [np.array([0.1, 0.2, 0.3, 0.4] * 96)]  # 384 dims
+            mock_st.return_value = mock_model
+            
+            categorizer = SpanCategorizer(taxonomy=wrapped_taxonomy)
+            
+            # Check that root embedding is not all zeros (should be centroid of children)
+            self.assertIn("embedding", categorizer.taxonomy)
+            root_embedding = categorizer.taxonomy["embedding"]
+            self.assertFalse(np.allclose(root_embedding, 0), 
+                           "Root embedding should not be all zeros")
+            
+            # Check first-level child embeddings
+            animal_node = categorizer.taxonomy["children"]["animal.n.01"]
+            self.assertIn("embedding", animal_node)
+            animal_embedding = animal_node["embedding"]
+            self.assertFalse(np.allclose(animal_embedding, 0), 
+                           "First-level child embedding should not be all zeros")
+            
+            # Check second-level child embeddings
+            dog_node = animal_node["children"]["dog.n.01"]
+            self.assertIn("embedding", dog_node)
+            dog_embedding = dog_node["embedding"]
+            self.assertFalse(np.allclose(dog_embedding, 0), 
+                           "Second-level child embedding should not be all zeros")
+
+    def test_embeddings_not_all_zeros_with_wordnet_synsets(self):
+        """Test that embeddings are not all zeros when using WordNet synsets."""
+        synset_taxonomy = {
+            "children": {
+                "animal.n.01": {
+                    "label": "ANIMAL",
+                    "wordnet_synsets": ["animal.n.01"],
+                    "children": {
+                        "dog.n.01": {
+                            "label": "DOG",
+                            "wordnet_synsets": ["dog.n.01", "domestic_dog.n.01"]
+                        }
+                    }
+                }
+            }
+        }
+        
+        with patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer') as mock_st:
+            mock_model = Mock()
+            # Create non-zero embedding
+            mock_model.encode.return_value = [np.array([0.1, 0.2, 0.3, 0.4] * 96)]  # 384 dims
+            mock_st.return_value = mock_model
+            
+            categorizer = SpanCategorizer(taxonomy=synset_taxonomy)
+            
+            # Check that synset embeddings are not all zeros
+            animal_node = categorizer.taxonomy["children"]["animal.n.01"]
+            self.assertIn("wordnet_synsets", animal_node)
+            self.assertIn("embedding", animal_node["wordnet_synsets"])
+            synset_embedding = animal_node["wordnet_synsets"]["embedding"]
+            self.assertFalse(np.allclose(synset_embedding, 0), 
+                           "WordNet synset embedding should not be all zeros")
+            
+            # Check that node embeddings are not all zeros
+            self.assertIn("embedding", animal_node)
+            node_embedding = animal_node["embedding"]
+            self.assertFalse(np.allclose(node_embedding, 0), 
+                           "Node embedding should not be all zeros")
+
+    def test_embeddings_propagate_up_hierarchy(self):
+        """Test that embeddings properly propagate up the hierarchy."""
+        hierarchical_taxonomy = {
+            "children": {
+                "top.n.01": {
+                    "label": "TOP_LEVEL",
+                    "children": {
+                        "middle.n.01": {
+                            "label": "MIDDLE_LEVEL",
+                            "children": {
+                                "leaf.n.01": {
+                                    "label": "LEAF_LEVEL",
+                                    "description": "A leaf node with content"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        with patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer') as mock_st:
+            mock_model = Mock()
+            # Create non-zero embedding
+            mock_model.encode.return_value = [np.array([0.1, 0.2, 0.3, 0.4] * 96)]  # 384 dims
+            mock_st.return_value = mock_model
+            
+            categorizer = SpanCategorizer(taxonomy=hierarchical_taxonomy)
+            
+            # Check that embeddings exist at all levels
+            root_embedding = categorizer.taxonomy["embedding"]
+            top_embedding = categorizer.taxonomy["children"]["top.n.01"]["embedding"]
+            middle_embedding = categorizer.taxonomy["children"]["top.n.01"]["children"]["middle.n.01"]["embedding"]
+            leaf_embedding = categorizer.taxonomy["children"]["top.n.01"]["children"]["middle.n.01"]["children"]["leaf.n.01"]["embedding"]
+            
+            # All embeddings should not be all zeros
+            self.assertFalse(np.allclose(root_embedding, 0), "Root embedding should not be all zeros")
+            self.assertFalse(np.allclose(top_embedding, 0), "Top-level embedding should not be all zeros")
+            self.assertFalse(np.allclose(middle_embedding, 0), "Middle-level embedding should not be all zeros")
+            self.assertFalse(np.allclose(leaf_embedding, 0), "Leaf-level embedding should not be all zeros")
+            
+            # Root embedding should be influenced by leaf content (through propagation)
+            # They should be similar since the leaf content propagates up
+            similarity = np.dot(root_embedding, leaf_embedding) / (np.linalg.norm(root_embedding) * np.linalg.norm(leaf_embedding))
+            self.assertGreater(similarity, 0.5, "Root embedding should be similar to leaf embedding due to propagation")
+
+    def test_embeddings_not_all_zeros_mixed_features(self):
+        """Test embeddings with mixed taxonomic features (description + synsets)."""
+        mixed_taxonomy = {
+            "children": {
+                "entity.n.01": {
+                    "label": "ENTITY",
+                    "description": "A general entity",
+                    "wordnet_synsets": ["entity.n.01"],
+                    "children": {
+                        "person.n.01": {
+                            "label": "PERSON",
+                            "description": "A human being",
+                            "wordnet_synsets": ["person.n.01", "individual.n.01"]
+                        }
+                    }
+                }
+            }
+        }
+        
+        with patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer') as mock_st:
+            mock_model = Mock()
+            # Create non-zero embedding
+            mock_model.encode.return_value = [np.array([0.1, 0.2, 0.3, 0.4] * 96)]  # 384 dims
+            mock_st.return_value = mock_model
+            
+            categorizer = SpanCategorizer(taxonomy=mixed_taxonomy)
+            
+            # Check parent node with mixed features
+            entity_node = categorizer.taxonomy["children"]["entity.n.01"]
+            
+            # Description embedding should not be all zeros
+            self.assertIn("description", entity_node)
+            self.assertIn("embedding", entity_node["description"])
+            desc_embedding = entity_node["description"]["embedding"]
+            self.assertFalse(np.allclose(desc_embedding, 0), 
+                           "Description embedding should not be all zeros")
+            
+            # Synset embedding should not be all zeros
+            self.assertIn("wordnet_synsets", entity_node)
+            self.assertIn("embedding", entity_node["wordnet_synsets"])
+            synset_embedding = entity_node["wordnet_synsets"]["embedding"]
+            self.assertFalse(np.allclose(synset_embedding, 0), 
+                           "Synset embedding should not be all zeros")
+            
+            # Node embedding (centroid) should not be all zeros
+            self.assertIn("embedding", entity_node)
+            node_embedding = entity_node["embedding"]
+            self.assertFalse(np.allclose(node_embedding, 0), 
+                           "Node embedding should not be all zeros")
+            
+            # Child node embedding should not be all zeros
+            person_node = entity_node["children"]["person.n.01"]
+            self.assertIn("embedding", person_node)
+            person_embedding = person_node["embedding"]
+            self.assertFalse(np.allclose(person_embedding, 0), 
+                           "Child node embedding should not be all zeros")
 
 
 if __name__ == '__main__':

@@ -314,30 +314,31 @@ class TaxonomyValidator:
                     info=[e for e in all_errors if e.severity == "info"]
                 )
             
-            # Special handling for root level - can be a collection of nodes
+            # Root level must have wrapped structure
             if path == "root":
-                # Root can either be a single node with children, or a collection of top-level nodes
-                if "children" in taxonomy:
-                    # Root has children - validate as internal node
-                    all_errors.extend(self.validate_internal_node(taxonomy, path))
-                    for key, child in taxonomy["children"].items():
-                        child_path = f"{path}.children.{key}"
-                        child_result = self.validate_taxonomy(child, child_path)
-                        all_errors.extend(child_result.errors)
-                        all_errors.extend(child_result.warnings)
-                        all_errors.extend(child_result.info)
-                else:
-                    # Root is a collection of top-level nodes
-                    for key, child in taxonomy.items():
-                        # Skip known optional keys and taxonomic features at root level
-                        if (key not in self.OPTIONAL_KEYS and 
-                            key != "embedding" and 
-                            key not in self.taxonomic_features):
-                            child_path = f"{path}.{key}"
-                            child_result = self.validate_taxonomy(child, child_path)
-                            all_errors.extend(child_result.errors)
-                            all_errors.extend(child_result.warnings)
-                            all_errors.extend(child_result.info)
+                # Root must have a "children" key - wrapped structure is required
+                if "children" not in taxonomy:
+                    all_errors.append(ValidationError(
+                        path=path,
+                        error_type="missing_children",
+                        message="Root taxonomy must have a 'children' key with wrapped structure",
+                        severity="error"
+                    ))
+                    return ValidationResult(
+                        is_valid=False,
+                        errors=[e for e in all_errors if e.severity == "error"],
+                        warnings=[e for e in all_errors if e.severity == "warning"],
+                        info=[e for e in all_errors if e.severity == "info"]
+                    )
+                
+                # Validate as internal node (root with children)
+                all_errors.extend(self.validate_internal_node(taxonomy, path))
+                for key, child in taxonomy["children"].items():
+                    child_path = f"{path}.children.{key}"
+                    child_result = self.validate_taxonomy(child, child_path)
+                    all_errors.extend(child_result.errors)
+                    all_errors.extend(child_result.warnings)
+                    all_errors.extend(child_result.info)
             else:
                 # Non-root nodes: determine if this is a leaf or internal node
                 is_leaf = "children" not in taxonomy

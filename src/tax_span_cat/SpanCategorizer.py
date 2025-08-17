@@ -125,13 +125,15 @@ class SpanCategorizer:
             for label, subtree in node.items():
                 # Process children
                 if label == "children":
-                    # recursively embed each child and collect their embeddings
-                    new_node[label] = self._embed_taxonomy(subtree)
-                    # Children is a dictionary of child nodes, each with their own embedding
-                    # Collect embeddings from all child nodes
-                    for child_name, child_node in new_node[label].items():
-                        if isinstance(child_node, dict) and "embedding" in child_node:
-                            subtree_centroids.append(child_node["embedding"])
+                    # Process children directly - don't apply filtering to child nodes
+                    new_node[label] = {}
+                    for child_name, child_node in subtree.items():
+                        # Recursively embed each child node
+                        embedded_child = self._embed_taxonomy(child_node)
+                        new_node[label][child_name] = embedded_child
+                        # Collect the child's embedding for parent centroid calculation
+                        if isinstance(embedded_child, dict) and "embedding" in embedded_child:
+                            subtree_centroids.append(embedded_child["embedding"])
                 
                 # Process taxonomic features
                 elif label in taxonomic_features:
