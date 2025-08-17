@@ -4,20 +4,22 @@ This document describes how to create and structure taxonomies for the SpanCateg
 
 ## Overview
 
-Taxonomies define the hierarchical category structure used for semantic classification. They are JSON files that describe categories, their relationships, and semantic information used for embedding generation.
+Taxonomies define the hierarchical category structure used for semantic classification. They are JSON files that describe categories, their relationships, and semantic information used for embedding generation. The taxonomy format uses WordNet synsets as keys to provide semantic grounding for each category level.
 
 ## Basic Structure
 
-Taxonomies are nested JSON objects with the following required structure:
+Taxonomies are nested JSON objects where each key is a WordNet synset identifier and each value contains category information:
 
 ```json
 {
-  "children": {
-    "CATEGORY_NAME": {
-      "description": "Category description text",
-      "wordnet_synsets": ["synset.pos.nn"],
-      "children": {
-        // Nested subcategories follow the same structure
+  "synset.pos.nn": {
+    "label": "Category_Display_Name",
+    "children": {
+      "child_synset.pos.nn": {
+        "label": "Subcategory_Name",
+        "children": {
+          // Further nested subcategories or leaf nodes
+        }
       }
     }
   }
@@ -26,130 +28,187 @@ Taxonomies are nested JSON objects with the following required structure:
 
 ## Required Fields
 
-### `children`
-A dictionary containing subcategories. Every taxonomy node must have a `children` field, even if it's empty (`{}`).
-
-**Example:**
-```json
-{
-  "children": {
-    "PERSON": { /* category definition */ },
-    "ORGANIZATION": { /* category definition */ }
-  }
-}
-```
-
-### Category Fields
-
-Each category within `children` should contain:
-
-#### `description` (optional)
-A text description of the category. This is embedded and used for semantic matching.
-
-**Guidelines:**
-- Be descriptive but concise
-- Use natural language
-- Include key distinguishing characteristics
-- Avoid overly technical jargon
-
-**Example:**
-```json
-"description": "Human beings including real people and fictional characters"
-```
-
-#### `wordnet_synsets` (optional but recommended)
-A list of WordNet synset identifiers that expand the semantic understanding of the category.
-
-**Format:** `"word.part_of_speech.sense_number"`
-- `word`: The lemma
+### Synset Keys
+Category keys must be valid WordNet synset identifiers in the format `"word.part_of_speech.sense_number"`:
+- `word`: The lemma (e.g., "person", "organization")
 - `part_of_speech`: `n` (noun), `v` (verb), `a` (adjective), `r` (adverb)
 - `sense_number`: Numeric identifier (01, 02, etc.)
 
 **Example:**
 ```json
-"wordnet_synsets": ["person.n.01", "individual.n.01", "human.n.01"]
+{
+  "person.n.01": { /* category definition */ },
+  "organization.n.01": { /* category definition */ }
+}
 ```
 
-**Finding Synsets:**
+### Category Fields
+
+Each category within the taxonomy should contain:
+
+#### `label` (required)
+A human-readable display name for the category. This is the name that will be used for classification results and user interfaces.
+
+**Guidelines:**
+- Use **descriptive names** that clearly indicate the category purpose
+- Follow **consistent naming conventions** (e.g., Pascal_Case, UPPER_CASE)
+- Make labels **intuitive** for end users
+- For leaf nodes, labels often correspond to NER tag names (e.g., "PERSON", "ORG", "GPE")
+
+**Example:**
+```json
+"label": "Individual_People"
+```
+
+#### `children` (optional for leaf nodes)
+Nested subcategories following the same synset-based structure. Leaf nodes (final categories) may omit the `children` field entirely.
+
+**Example:**
+```json
+{
+  "person.n.01": {
+    "label": "Individual_People",
+    "children": {
+      "individual.n.01": {
+        "label": "PERSON"
+      }
+    }
+  }
+}
+```
+
+## Semantic Hierarchy Design
+
+### WordNet Integration
+The taxonomy leverages WordNet's semantic hierarchy by using synsets as keys. This provides:
+- **Semantic grounding** for each category level
+- **Consistent hierarchical relationships** based on WordNet's hypernym/hyponym structure
+- **Built-in semantic similarity** for embedding generation
+
+### Finding Appropriate Synsets
 ```python
 import nltk
 from nltk.corpus import wordnet as wn
 
-# Find synsets for a word
+# Find synsets for a concept
 synsets = wn.synsets('person')
 for syn in synsets:
     print(f"{syn.name()}: {syn.definition()}")
+    
+# Explore hypernym hierarchy
+person_syn = wn.synset('person.n.01')
+print("Hypernyms:", person_syn.hypernyms())
+print("Hyponyms:", person_syn.hyponyms())
 ```
 
-#### `children` (required)
-Nested subcategories following the same structure. Use empty dictionary `{}` for leaf nodes.
-For a complete example, see `src/tax_span_cat/taxonomies/SpaCy_NER.json`.
+### Hierarchy Structure
+The taxonomy follows a top-down approach from general to specific:
+
+1. **Root Level**: Fundamental WordNet categories (e.g., `physical_entity.n.01`, `abstraction.n.06`)
+2. **Intermediate Levels**: Progressively more specific semantic categories
+3. **Leaf Nodes**: Final classification labels, often corresponding to NER tags
+
+**Example hierarchy:**
+```
+physical_entity.n.01 → causal_agent.n.01 → person.n.01 → individual.n.01 (PERSON)
+```
 
 ## Design Guidelines
 
 ### Hierarchy Depth
 - **Shallow hierarchies** (2-3 levels): Faster processing, broader categories
-- **Deep hierarchies** (4+ levels): More specific categorization, slower processing
-- **Recommendation**: Start with 3-4 levels maximum, expand as needed
+- **Deep hierarchies** (4+ levels): More specific categorization, may be slower
+- **Current format**: Typically 4-5 levels from root synset to final label
+- **Recommendation**: Balance semantic precision with processing efficiency
 
-### Category Naming
-- Use **UPPER_CASE** for category names
-- Be **consistent** with naming conventions
-- Use **descriptive** names that clearly indicate the category purpose
-- Avoid **ambiguous** or **overlapping** category names
+### Category Labeling
+- **Intermediate levels**: Use descriptive, semantic category names (e.g., "Individual_People", "Formal_Organizations")
+- **Leaf nodes**: Use standard NER tag conventions (e.g., "PERSON", "ORG", "GPE", "MONEY")
+- **Consistency**: Maintain consistent naming patterns within semantic groups
+
+### Synset Selection
+- Choose **appropriate semantic level** synsets that represent meaningful distinctions
+- Ensure **WordNet compatibility** - verify synsets exist in your WordNet version
+- Use **hypernym relationships** to create logical hierarchical flow
+- Balance **specificity** with **coverage** for your domain
 
 ### Semantic Coverage
-- Ensure **comprehensive coverage** of your domain
-- Avoid **semantic gaps** between sibling categories  
-- Include **sufficient synsets** for robust matching
+- Ensure **comprehensive coverage** of your target entity types
+- Map **standard NER categories** to appropriate WordNet semantic paths
+- Include **domain-specific** categories as needed
 - Test with **representative text samples** from your domain
 
-### Balancing Specificity
-- **Too broad**: Poor discrimination between different entity types
-- **Too specific**: May miss valid entities due to narrow definitions
-- **Sweet spot**: Categories that capture meaningful distinctions in your domain
+## Complete Example Structure
 
-## Taxonomy Validation
+Based on the provided SpaCy_NER.json, here's the general pattern:
 
-### TaxonomyValidator (coming soon)
-
-
-## Advanced Features
-
-### Custom Taxonomic Features
-You can extend taxonomies with custom features by modifying the `taxonomic_features` parameter:
-
-```python
-categorizer = SpanCategorizer(
-    taxonomic_features=["description", "wordnet_synsets", "examples", "aliases"]
-)
-```
-
-Then include these fields in your taxonomy:
 ```json
 {
-  "description": "Technology companies and products",
-  "wordnet_synsets": ["technology.n.01"],
-  "examples": ["Apple, Microsoft, Google, Amazon"],
-  "aliases": ["tech company", "software company", "IT firm"],
-  "children": {}
+  "physical_entity.n.01": {
+    "label": "Physical_Entities",
+    "children": {
+      "causal_agent.n.01": {
+        "label": "Agents_and_Actors", 
+        "children": {
+          "person.n.01": {
+            "label": "Individual_People",
+            "children": {
+              "individual.n.01": {
+                "label": "PERSON"
+              }
+            }
+          },
+          "social_group.n.01": {
+            "label": "Social_Groups",
+            "children": {
+              "organization.n.01": {
+                "label": "Formal_Organizations",
+                "children": {
+                  "corporate_body.n.01": {
+                    "label": "ORG"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
 ```
 
 ## Troubleshooting
 
-**Categories too broad:**
-- Symptoms: Many unrelated entities get the same label
-- Solution: Add more specific subcategories
+**Invalid synsets:**
+- Symptoms: Errors loading taxonomy, missing synset definitions
+- Solution: Verify synset identifiers exist in WordNet, check spelling/format
 
-**Categories too narrow:**
-- Symptoms: Entities don't match any category (fall back to parent)
-- Solution: Broaden descriptions or add more synsets
+**Semantic misalignment:**
+- Symptoms: Unexpected classification results, poor semantic matching
+- Solution: Review synset choices, ensure they align with intended semantics
 
-**Poor semantic coverage:**
-- Symptoms: Inconsistent classification of similar entities
-- Solution: Add more comprehensive synsets and examples
+**Hierarchy inconsistency:**
+- Symptoms: Illogical parent-child relationships in results
+- Solution: Follow WordNet hypernym/hyponym relationships more closely
 
-**Hierarchy imbalance:**
-- Symptoms: Some branches much deeper than others
-- Solution: Restructure for more balanced depth
+**Missing coverage:**
+- Symptoms: Entities don't match any category
+- Solution: Add appropriate synset paths for missing entity types
+
+## Validation
+
+### Synset Validation
+```python
+from nltk.corpus import wordnet as wn
+
+def validate_synset(synset_name):
+    try:
+        synset = wn.synset(synset_name)
+        return True, synset.definition()
+    except:
+        return False, f"Invalid synset: {synset_name}"
+```
+
+### Hierarchy Validation
+Ensure parent-child synset relationships follow WordNet semantic hierarchy where possible, though domain-specific deviations may be necessary for classification effectiveness.

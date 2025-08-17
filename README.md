@@ -1,31 +1,31 @@
 # SpanCategorizer
 
-A hierarchical semantic search module for Named Entity Recognition (NER) that uses embedding-based similarity matching to classify text spans according to custom taxonomies.
+A hierarchical semantic search module for Named Entity Recognition (NER) that uses embedding-based similarity matching to classify text spans according to custom **WordNet-aligned taxonomies**.
 
 ## Overview
 
 SpanCategorizer performs intelligent text span classification by combining:
 - **Semantic embeddings** (via SentenceTransformers or spaCy)
-- **Hierarchical taxonomies** (JSON-based category trees)
-- **WordNet integration** (for semantic expansion)
-- **Cosine similarity matching** (for finding best categorical fits)
+- **Hierarchical, WordNet-based taxonomies** (JSON category trees)
+- **WordNet synsets integration** for semantic expansion
+- **Cosine similarity matching** for best categorical fits
 
-The system recursively searches through taxonomic hierarchies to find the most semantically appropriate labels for noun chunks in text.
+The system recursively searches through taxonomic hierarchies (defined by synsets) to find the most semantically appropriate labels for noun chunks in text.
 
 ## Features
 
-- **Hierarchical semantic search** through custom taxonomies
+- **Hierarchical semantic search** through WordNet-aligned taxonomies
 - **Multiple embedding models** (SentenceTransformers, spaCy)
 - **WordNet synset expansion** for richer semantic understanding  
 - **Configurable similarity thresholds** for precision control
 - **SpaCy integration** for seamless NLP pipeline integration
-- **Flexible taxonomy loading** with fallback support
+- **Flexible taxonomy loading** with JSON-based hierarchical format
 
 ## Installation
 
 ```bash
 pip install git+https://github.com/IsaacFigNewton/Taxonomic-Span-Categorization.git
-```
+````
 
 ## Quick Start
 
@@ -55,26 +55,30 @@ for label, spans in categorized_doc.spans.items():
 
 ### Parameters
 
-- **`embedding_model`** (str): Model name for SentenceTransformers or spaCy model
-  - Default: `"all-MiniLM-L6-v2"`
-  - Alternatives: `"all-mpnet-base-v2"`, `"en_core_web_lg"`, etc.
+* **`embedding_model`** (str): Model name for SentenceTransformers or spaCy model
 
-- **`taxonomy_path`** (str|None): Path to custom taxonomy JSON file
-  - Default: Uses built-in SpaCy NER taxonomy
+  * Default: `"all-MiniLM-L6-v2"`
+  * Alternatives: `"all-mpnet-base-v2"`, `"en_core_web_lg"`, etc.
 
-- **`threshold`** (float): Minimum cosine similarity for category assignment
-  - Default: `0.5`
-  - Range: `0.0` to `1.0`
+* **`taxonomy_path`** (str|None): Path to custom taxonomy JSON file
 
-- **`taxonomic_features`** (List[str]): Features to include in embeddings
-  - Default: `["description", "wordnet_synsets"]`
+  * Default: Uses built-in WordNet-aligned taxonomy (`SpaCy_NER.json`)
+
+* **`threshold`** (float): Minimum cosine similarity for category assignment
+
+  * Default: `0.5`
+  * Range: `0.0` to `1.0`
+
+* **`taxonomic_features`** (List\[str]): Features to include in embeddings
+
+  * Default: `["description", "wordnet_synsets"]`
 
 ### Example Configuration
 
 ```python
 categorizer = SpanCategorizer(
     embedding_model="all-mpnet-base-v2",
-    taxonomy_path="./custom_taxonomy.json",
+    taxonomy_path="./SpaCy_NER.json",
     threshold=0.7,
     taxonomic_features=["description", "wordnet_synsets", "examples"]
 )
@@ -82,44 +86,77 @@ categorizer = SpanCategorizer(
 
 ## Taxonomy Format
 
-For detailed information on creating and structuring taxonomies, see [TAXONOMY.md](TAXONOMY.md).
+Taxonomies are JSON objects structured around **WordNet synset IDs** as keys.
+Each node contains:
+
+* **`label`**: Human-readable category label
+* **`children`**: Nested subcategories, keyed by their WordNet synset
+
+### Example
+
+```json
+{
+  "physical_entity.n.01": {
+    "label": "Physical_Entities",
+    "children": {
+      "causal_agent.n.01": {
+        "label": "Agents_and_Actors",
+        "children": {
+          "person.n.01": {
+            "label": "Individual_People",
+            "children": {
+              "individual.n.01": {
+                "label": "PERSON"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+➡️ See [TAXONOMY.md](TAXONOMY.md) for full details.
 
 ## API Reference
 
 ### SpanCategorizer Class
 
 #### `__init__(embedding_model, taxonomy_path, threshold, taxonomic_features)`
+
 Initialize the categorizer with specified configuration.
 
 #### `__call__(doc: spacy.Doc) -> spacy.Doc`
+
 Process a spaCy document and return it with categorized spans.
 
 **Parameters:**
-- `doc`: spaCy Doc object to process
+
+* `doc`: spaCy Doc object to process
 
 **Returns:**
-- spaCy Doc object with populated `.spans` and `.ents` attributes
+
+* spaCy Doc object with populated `.spans` and `.ents` attributes
 
 ### Key Methods
 
-#### `_hierarchical_sem_search(query, current_label, current_node)`
-Perform hierarchical semantic search through taxonomy.
+* **`_hierarchical_sem_search(query, current_label, current_node)`**
+  Recursive search through taxonomy.
 
-#### `_semantic_search(query_vect, corpus_vects)`
-Find best matching vector using cosine similarity.
+* **`_semantic_search(query_vect, corpus_vects)`**
+  Find best match using cosine similarity.
 
-#### `_embed(text)`
-Generate normalized embeddings for input text.
+* **`_embed(text)`**
+  Generate normalized embeddings for text.
 
 ## Examples
 
-### Custom Taxonomy
-
-See [TAXONOMY.md](docs/TAXONOMY.md) for detailed examples of creating custom taxonomies.
+### Using Custom Taxonomy
 
 ```python
-# Use custom taxonomy
-categorizer = SpanCategorizer(taxonomy_path="tech_taxonomy.json")
+# Use custom WordNet-based taxonomy
+categorizer = SpanCategorizer(taxonomy_path="custom_taxonomy.json")
 ```
 
 ### Batch Processing
@@ -144,7 +181,7 @@ for text in texts:
 
 ## Performance Considerations
 
-- **Model Choice**: `all-MiniLM-L6-v2` is faster, `all-mpnet-base-v2` is more accurate
-- **Threshold Tuning**: Higher thresholds reduce false positives but may miss valid matches
-- **Taxonomy Depth**: Deeper taxonomies provide more specificity but slower processing
-- **Caching**: Embeddings are computed once during initialization for efficiency
+* **Model Choice**: `all-MiniLM-L6-v2` is faster, `all-mpnet-base-v2` is more accurate
+* **Threshold Tuning**: Higher thresholds reduce false positives but may miss valid matches
+* **Taxonomy Depth**: Deeper hierarchies provide more specificity but slower processing
+* **Caching**: Embeddings are precomputed for efficiency
