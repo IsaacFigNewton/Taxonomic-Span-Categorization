@@ -1328,6 +1328,154 @@ class TestSpanCategorizer(unittest.TestCase):
             self.assertFalse(np.allclose(person_embedding, 0), 
                            "Child node embedding should not be all zeros")
 
+    def test_hierarchical_search_handles_children_without_taxonomic_features(self):
+        """Test that hierarchical search handles children without taxonomic features (uses WordNet fallback)."""
+        with patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer') as mock_st:
+            mock_model = Mock()
+            # Create 384-dimensional embeddings to match default size
+            mock_model.encode.return_value = [np.array([0.1, 0.2, 0.3] + [0.0] * 381)]
+            mock_st.return_value = mock_model
+            
+            # Create taxonomy where some children have taxonomic features, others rely on WordNet fallback
+            taxonomy_with_mixed_features = {
+                "children": {
+                    "parent.n.01": {
+                        "label": "PARENT_CATEGORY",
+                        "description": "A parent category",
+                        "children": {
+                            "child_with_features.n.01": {
+                                "label": "CHILD_WITH_FEATURES",
+                                "description": "A child with taxonomic features"
+                            },
+                            "dog.n.01": {
+                                "label": "CHILD_WITHOUT_FEATURES"
+                                # No taxonomic features - will use WordNet fallback for "dog.n.01"
+                            }
+                        }
+                    }
+                }
+            }
+            
+            categorizer = SpanCategorizer(taxonomy=taxonomy_with_mixed_features, threshold=-1.0)
+            
+            # Verify that both children now have embeddings (one from description, one from WordNet fallback)
+            parent_node = categorizer.taxonomy["children"]["parent.n.01"]
+            child_with_features = parent_node["children"]["child_with_features.n.01"]
+            child_without_features = parent_node["children"]["dog.n.01"]
+            
+            self.assertIn("embedding", child_with_features, "Child with features should have embedding")
+            self.assertIn("embedding", child_without_features, "Child without features should have WordNet fallback embedding")
+            
+            # Test that search works with both types of children
+            result = categorizer._hierarchical_sem_search(
+                "test query", 
+                "PARENT_CATEGORY",
+                parent_node
+            )
+            
+            # Should return a valid result without crashing
+            self.assertIsInstance(result, str)
+            # Should be one of the child synset keys since both have embeddings now
+            self.assertIn(result, ["child_with_features.n.01", "dog.n.01"])
+
+    def test_wordnet_fallback_embedding_for_children_without_features(self):
+        """Test that children without taxonomic features get WordNet fallback embeddings."""
+        with patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer') as mock_st:
+            mock_model = Mock()
+            # Create 384-dimensional embeddings to match default size  
+            # Use a repeating pattern to handle multiple embeddings needed for WordNet synsets
+            def mock_encode(texts):
+                # Always return the same pattern for predictable testing
+                return [np.array([0.1, 0.2, 0.3] + [0.1] * 381)]
+            
+            mock_model.encode.side_effect = mock_encode
+            mock_st.return_value = mock_model
+            
+            # Create taxonomy where children have no taxonomic features
+            taxonomy_no_features = {
+                "children": {
+                    "parent.n.01": {
+                        "label": "PARENT_CATEGORY",
+                        "description": "A parent category",
+                        "children": {
+                            "dog.n.01": {
+                                "label": "DOG_CHILD"
+                                # No taxonomic features - should use WordNet fallback
+                            },
+                            "cat.n.01": {
+                                "label": "CAT_CHILD"
+                                # No taxonomic features - should use WordNet fallback
+                            }
+                        }
+                    }
+                }
+            }
+            
+            categorizer = SpanCategorizer(taxonomy=taxonomy_no_features, threshold=0.0)
+            
+            # Verify all children got embeddings via WordNet fallback
+            parent_node = categorizer.taxonomy["children"]["parent.n.01"]
+            dog_child = parent_node["children"]["dog.n.01"]
+            cat_child = parent_node["children"]["cat.n.01"]
+            
+            self.assertIn("embedding", dog_child, "Dog child should have WordNet fallback embedding")
+            self.assertIn("embedding", cat_child, "Cat child should have WordNet fallback embedding")
+            
+            # Embeddings should not be all zeros (they came from WordNet)
+            self.assertFalse(np.allclose(dog_child["embedding"], 0), 
+                           "WordNet fallback embedding should not be all zeros")
+            self.assertFalse(np.allclose(cat_child["embedding"], 0), 
+                           "WordNet fallback embedding should not be all zeros")
+
+    def test_wordnet_fallback_handles_invalid_synsets(self):
+        """Test that WordNet fallback gracefully handles invalid synset keys."""
+        with patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer') as mock_st:
+            mock_model = Mock()
+            # Create 384-dimensional embeddings to match default size  
+            # Use a repeating pattern to handle multiple embeddings needed
+            def mock_encode(texts):
+                # Always return the same pattern for predictable testing
+                return [np.array([0.2, 0.3, 0.4] + [0.2] * 381)]
+            
+            mock_model.encode.side_effect = mock_encode
+            mock_st.return_value = mock_model
+            
+            # Create taxonomy with invalid synset keys
+            taxonomy_invalid_synsets = {
+                "children": {
+                    "parent.n.01": {
+                        "label": "PARENT_CATEGORY",
+                        "description": "A parent category",
+                        "children": {
+                            "invalid_synset.n.999": {
+                                "label": "INVALID_CHILD"
+                                # Invalid synset key - should fall back to text embedding
+                            },
+                            "not_a_synset": {
+                                "label": "NOT_SYNSET_CHILD"
+                                # Not synset format - should fall back to text embedding
+                            }
+                        }
+                    }
+                }
+            }
+            
+            categorizer = SpanCategorizer(taxonomy=taxonomy_invalid_synsets, threshold=0.0)
+            
+            # Verify all children got embeddings despite invalid synset keys
+            parent_node = categorizer.taxonomy["children"]["parent.n.01"]
+            invalid_child = parent_node["children"]["invalid_synset.n.999"]
+            not_synset_child = parent_node["children"]["not_a_synset"]
+            
+            self.assertIn("embedding", invalid_child, "Invalid synset child should have text fallback embedding")
+            self.assertIn("embedding", not_synset_child, "Non-synset child should have text fallback embedding")
+            
+            # Embeddings should not be all zeros
+            self.assertFalse(np.allclose(invalid_child["embedding"], 0), 
+                           "Text fallback embedding should not be all zeros")
+            self.assertFalse(np.allclose(not_synset_child["embedding"], 0), 
+                           "Text fallback embedding should not be all zeros")
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -7,6 +7,9 @@ from sklearn.preprocessing import normalize
 from sklearn.metrics.pairwise import cosine_similarity
 
 from nltk.corpus import wordnet as wn
+import nltk
+nltk.download('wordnet')
+nltk.download('omw-1.4')
 
 import spacy
 from spacy.tokens import Doc, Span
@@ -130,6 +133,31 @@ class SpanCategorizer:
                     for child_name, child_node in subtree.items():
                         # Recursively embed each child node
                         embedded_child = self._embed_taxonomy(child_node)
+                        
+                        # Ensure every child has a meaningful embedding - use WordNet synset fallback for zero embeddings
+                        if isinstance(embedded_child, dict) and "embedding" in embedded_child:
+                            # Check if embedding is all zeros (indicates no taxonomic features were found)
+                            if np.allclose(embedded_child["embedding"], 0):
+                                # Use child_name as WordNet synset fallback
+                                try:
+                                    synset = wn.synset(child_name)
+                                    lemma_names = [
+                                        str(lemma.name()).replace('_', ' ')
+                                        for lemma in synset.lemmas()
+                                    ]
+                                    if lemma_names:
+                                        synset_embeddings = [
+                                            self._embed(synonym)
+                                            for synonym in lemma_names
+                                        ]
+                                        embedded_child["embedding"] = np.mean(np.array(synset_embeddings), axis=0)
+                                    else:
+                                        # Fallback to embedding the synset name directly
+                                        embedded_child["embedding"] = self._embed(child_name.replace('_', ' '))
+                                except Exception:
+                                    # If WordNet lookup fails, embed the key directly
+                                    embedded_child["embedding"] = self._embed(child_name.replace('_', ' '))
+                        
                         new_node[label][child_name] = embedded_child
                         # Collect the child's embedding for parent centroid calculation
                         if isinstance(embedded_child, dict) and "embedding" in embedded_child:
@@ -237,7 +265,21 @@ class SpanCategorizer:
         # get query embedding
         query_vect = self._embed(query)
         # get embeddings of taxonomic terms at the current level
-        corpus_vects = [current_node["children"][child]["embedding"] for child in children]
+        corpus_vects = []
+        valid_children = []
+        for child in children:
+            child_node = current_node["children"][child]
+            if "embedding" in child_node:
+                corpus_vects.append(child_node["embedding"])
+                valid_children.append(child)
+        
+        # Update children list to only include those with embeddings
+        children = valid_children
+        
+        # Handle case where no children have embeddings
+        if not corpus_vects:
+            return current_node.get("label", current_label)
+        
         # get idx of closest match
         best_similarity, best_match_idx = self._semantic_search(query_vect, corpus_vects)
         # get synset key of closest match
