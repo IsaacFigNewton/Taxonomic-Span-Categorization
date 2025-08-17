@@ -14,6 +14,7 @@ from spacy.tokens import Doc, Span
 from sentence_transformers import SentenceTransformer
 
 import tax_span_cat.taxonomies
+from .TaxonomyValidator import TaxonomyValidator
 
 class SpanCategorizer:
     default_taxonomy_path = files(tax_span_cat.taxonomies).joinpath(f"SpaCy_NER.json")
@@ -55,6 +56,26 @@ class SpanCategorizer:
         else:
             # load the taxonomy from the default path
             self.taxonomy = self._load_taxonomy_from_path(self.default_taxonomy_path)
+        
+        # validate the taxonomy before embedding
+        validator = TaxonomyValidator(taxonomic_features=self.taxonomic_features)
+        validation_result = validator.validate_taxonomy(self.taxonomy)
+        
+        if not validation_result.is_valid:
+            error_messages = []
+            for error in validation_result.errors:
+                error_messages.append(f"{error.path}: {error.message}")
+            
+            raise ValueError(
+                f"Taxonomy validation failed with {len(validation_result.errors)} error(s):\n" +
+                "\n".join(error_messages)
+            )
+        
+        # Log warnings if any
+        if validation_result.has_warnings:
+            for warning in validation_result.warnings:
+                print(f"Taxonomy validation warning at {warning.path}: {warning.message}")
+        
         # embed the taxonomy's entries
         self.taxonomy = self._embed_taxonomy(self.taxonomy)
 
@@ -225,17 +246,24 @@ class SpanCategorizer:
                 current_label="ENTITY",
                 current_node={"children": self.taxonomy},
             )
-            # if this label isn't in the spans list, add it
-            if ent_label not in ner_doc.spans.keys():
-                ner_doc.spans[ent_label] = list()
             span = Span(
                 ner_doc,
                 start=chunk.start,
                 end=chunk.end,
                 label=ent_label
             )
-            # add the span to the doc's spans and ents
+            
+            # Initialize the spans list under the 'sc' key for span categorization
+            if 'sc' not in ner_doc.spans:
+                ner_doc.spans['sc'] = []
+            # add the span to the doc's spans under the 'sc' key
+            ner_doc.spans['sc'].append(span)
+            
+            # also add to individual label groups for backward compatibility
+            if ent_label not in ner_doc.spans.keys():
+                ner_doc.spans[ent_label] = list()
             ner_doc.spans[ent_label].append(span)
+            
             try:
                 ner_doc.set_ents(list(ner_doc.ents) + [span])
             except Exception as e:
