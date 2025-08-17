@@ -17,21 +17,26 @@ class TestSpanCategorizer(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method."""
         self.sample_taxonomy = {
-            "Animals": {
+            "causal_agent.n.01": {
+                "label": "Animals",
                 "description": "Living creatures",
                 "children": {
-                    "DOG": {
+                    "dog.n.01": {
+                        "label": "DOG",
                         "description": "Canine animals"
                     },
-                    "CAT": {
+                    "cat.n.01": {
+                        "label": "CAT",
                         "description": "Feline animals" 
                     }
                 }
             },
-            "Objects": {
+            "physical_entity.n.01": {
+                "label": "Objects",
                 "description": "Inanimate things",
                 "children": {
-                    "TOOL": {
+                    "tool.n.01": {
+                        "label": "TOOL",
                         "description": "Instruments for work"
                     }
                 }
@@ -223,14 +228,13 @@ class TestSpanCategorizer(unittest.TestCase):
                 
                 # Mock the embedded taxonomy structure
                 categorizer.taxonomy = {
-                    "children": {
-                        "Animals": {
-                            "embedding": np.array([0.9, 0.1, 0]),
-                            "children": {
-                                "DOG": {
-                                    "embedding": np.array([0.8, 0.2, 0]),
-                                    "children": {}
-                                }
+                    "causal_agent.n.01": {
+                        "label": "Animals",
+                        "embedding": np.array([0.9, 0.1, 0]),
+                        "children": {
+                            "dog.n.01": {
+                                "label": "DOG",
+                                "embedding": np.array([0.8, 0.2, 0])
                             }
                         }
                     }
@@ -243,7 +247,7 @@ class TestSpanCategorizer(unittest.TestCase):
                     result = categorizer._hierarchical_sem_search(
                         query="dog",
                         current_label="ENTITY", 
-                        current_node=categorizer.taxonomy
+                        current_node={"children": categorizer.taxonomy}
                     )
                     
                     # Should return Animals since the second call has low similarity
@@ -264,8 +268,9 @@ class TestSpanCategorizer(unittest.TestCase):
                 categorizer = SpanCategorizer(threshold=0.9)
                 
                 categorizer.taxonomy = {
-                    "children": {
-                        "Animals": {"embedding": np.array([0.1, 0.9, 0])}
+                    "causal_agent.n.01": {
+                        "label": "Animals", 
+                        "embedding": np.array([0.1, 0.9, 0])
                     }
                 }
                 
@@ -275,26 +280,27 @@ class TestSpanCategorizer(unittest.TestCase):
                     result = categorizer._hierarchical_sem_search(
                         query="dog",
                         current_label="ENTITY",
-                        current_node=categorizer.taxonomy
+                        current_node={"children": categorizer.taxonomy}
                     )
                     
                     self.assertEqual(result, "ENTITY")
 
     def test_hierarchical_sem_search_missing_children(self):
-        """Test hierarchical search raises error when children are missing."""
+        """Test hierarchical search handles leaf nodes correctly."""
         with patch.object(SpanCategorizer, '_init_embedding_model'):
             categorizer = SpanCategorizer.__new__(SpanCategorizer)
             
-            invalid_node = {"embedding": np.array([1, 0, 0])}
+            # Leaf node (no children, should return the label if present)
+            leaf_node = {"label": "LEAF_LABEL", "embedding": np.array([1, 0, 0])}
             
-            with self.assertRaises(KeyError) as context:
-                categorizer._hierarchical_sem_search(
-                    query="test",
-                    current_label="TEST",
-                    current_node=invalid_node
-                )
-                
-            self.assertIn("children", str(context.exception))
+            result = categorizer._hierarchical_sem_search(
+                query="test",
+                current_label="TEST",
+                current_node=leaf_node
+            )
+            
+            # Should return the leaf label
+            self.assertEqual(result, "LEAF_LABEL")
 
     @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
     def test_call_method_with_doc(self, mock_sentence_transformer):
@@ -496,7 +502,7 @@ class TestSpanCategorizer(unittest.TestCase):
                         mock_search.assert_called_once_with(
                             query="test",
                             current_label="ENTITY", 
-                            current_node=categorizer.taxonomy
+                            current_node={"children": categorizer.taxonomy}
                         )
 
     @patch('src.tax_span_cat.SpanCategorizer.spacy.load')

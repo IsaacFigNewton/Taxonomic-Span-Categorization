@@ -172,16 +172,17 @@ class SpanCategorizer:
 
         Returns the label in the taxonomy with the highest similarity to the query.
         """
-        # this either means there's a bug in this code or in the taxonomy
-        if "children" not in current_node.keys():
-            raise KeyError(f"'children' were missing from the current node being checked, '{current_label}'.")
+        # Check if this is a leaf node (has no children)
+        if "children" not in current_node:
+            # Return the label of this leaf node
+            return current_node.get("label", current_label)
 
         # get an ordered list of the labelled embeddings (excluding the embedding key itself)
         children = [key for key in current_node["children"].keys() if key != "embedding"]
         
         # if there are no valid children (only embedding keys), return current label
         if not children:
-            return current_label
+            return current_node.get("label", current_label)
             
         # get query embedding
         query_vect = self._embed(query)
@@ -189,17 +190,20 @@ class SpanCategorizer:
         corpus_vects = [current_node["children"][child]["embedding"] for child in children]
         # get idx of closest match
         best_similarity, best_match_idx = self._semantic_search(query_vect, corpus_vects)
-        # get label of closest match
-        best_match_label = children[best_match_idx]
+        # get synset key of closest match
+        best_match_synset = children[best_match_idx]
+        # get the actual label for display
+        best_match_node = current_node["children"][best_match_synset]
+        best_match_label = best_match_node.get("label", best_match_synset)
 
         print(f"Best match for '{query}' is '{best_match_label}' with similarity of {best_similarity}")
         if best_similarity <= self.threshold:
-            return current_label
+            return current_node.get("label", current_label)
         else:
             return self._hierarchical_sem_search(
                 query=query,
                 current_label=best_match_label,
-                current_node=current_node["children"][best_match_label]
+                current_node=best_match_node
             )
 
 
@@ -214,7 +218,7 @@ class SpanCategorizer:
             ent_label = self._hierarchical_sem_search(
                 query=chunk.text,
                 current_label="ENTITY",
-                current_node=self.taxonomy,
+                current_node={"children": self.taxonomy},
             )
             # if this label isn't in the spans list, add it
             if ent_label not in ner_doc.spans.keys():
