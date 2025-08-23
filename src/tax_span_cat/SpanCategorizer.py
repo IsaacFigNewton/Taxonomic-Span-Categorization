@@ -28,11 +28,15 @@ class SpanCategorizer:
                  taxonomy: Optional[Dict] = None,
                  taxonomy_path: Optional[str] = None,
                  threshold: float = 0.5,
-                 taxonomic_features: List[str]|None = None):
+                 taxonomic_features: List[str]|None = None,
+                 preserve_existing_ents: bool = False):
         # taxonomic features to include in taxonomic embeddings
         if not taxonomic_features:
             taxonomic_features = self.default_taxonomic_features
         self.taxonomic_features = taxonomic_features
+        
+        # whether to preserve existing entities when adding new ones
+        self.preserve_existing_ents = preserve_existing_ents
 
         self._init_embedding_model(embedding_model)
         self._init_taxonomy(taxonomy, taxonomy_path)
@@ -304,6 +308,7 @@ class SpanCategorizer:
         Takes a SpaCy Doc, classifies noun chunks using a hierarchical semantic search process through the taxonomy, and returns a new Doc with NER applied to associated spans.
         """
         ner_doc = doc.copy()
+        new_spans = []
 
         for chunk in doc.noun_chunks:
             # label the current chunk
@@ -330,9 +335,35 @@ class SpanCategorizer:
                 ner_doc.spans[ent_label] = list()
             ner_doc.spans[ent_label].append(span)
             
-            try:
-                ner_doc.set_ents(list(ner_doc.ents) + [span])
-            except Exception as e:
-                print(f"WARNING: {e}")
+            # Collect new spans for entity resolution
+            new_spans.append(span)
+        
+        # Handle entity conflicts based on preserve_existing_ents setting
+        try:
+            if self.preserve_existing_ents:
+                # Get existing entities
+                existing_ents = list(ner_doc.ents)
+                
+                # Filter out new spans that would conflict with existing entities
+                non_conflicting_spans = []
+                for span in new_spans:
+                    has_conflict = False
+                    for ent in existing_ents:
+                        # Check if span overlaps with existing entity
+                        if (span.start < ent.end and ent.start < span.end):
+                            has_conflict = True
+                            break
+                    
+                    if not has_conflict:
+                        non_conflicting_spans.append(span)
+                
+                # Set entities with existing entities and non-conflicting new spans
+                ner_doc.set_ents(existing_ents + non_conflicting_spans)
+            else:
+                # Replace all entities with our new spans only
+                ner_doc.set_ents(new_spans)
+                
+        except Exception as e:
+            print(f"WARNING: Failed to set entities: {e}")
 
         return ner_doc
