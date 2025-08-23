@@ -1,0 +1,779 @@
+{
+  "children": {
+    "abstraction.n.06": {
+      "label": "Abstract_Concepts",
+      "children": {
+        "attribute.n.02": {
+          "label": "Attributes",
+          "children": {
+            "property.n.02": {
+              "label": "Properties",
+              "children": {
+                "age.n.01": {
+                  "label": "Ages",
+                  "children": {
+                    "maturity.n.01": {
+                      "label": "Age_Groups",
+                      "description": "Age categories and maturity levels of individuals",
+                      "wordnet_synsets": ["maturity.n.01"]
+                    }
+                  }
+                },
+                "sex.n.01": {
+                  "label": "Sex_Categories",
+                  "description": "Gender and sex-related classifications",
+                  "wordnet_synsets": ["sex.n.01"]
+                },
+                "color.n.01": {
+                  "label": "Colors",
+                  "children": {
+                    "hue.n.01": {
+                      "label": "Hues",
+                      "description": "Color descriptions and hue variations",
+                      "wordnet_synsets": ["hue.n.01"]
+                    }
+                  }
+                },
+                "height.n.01": {
+                  "label": "Height_Measurements",
+                  "children": {
+                    "stature.n.01": {
+                      "label": "Stature",
+                      "description": "Physical height and stature descriptions",
+                      "wordnet_synsets": ["stature.n.01"]
+                    }
+                  }
+                },
+                "build.n.01": {
+                  "label": "Physical_Build",
+                  "description": "Body build and physical structure descriptions",
+                  "wordnet_synsets": ["build.n.01"]
+                },
+                "race.n.02": {
+                  "label": "Race_Ethnicity",
+                  "description": "Racial and ethnic characteristics",
+                  "wordnet_synsets": ["race.n.02"]
+                },
+                "feature.n.01": {
+                  "label": "Notable_Features",
+                  "description": "Distinctive physical or other notable features",
+                  "wordnet_synsets": ["feature.n.01"]
+                },
+                "status.n.01": {
+                  "label": "Status_Indicators",
+                  "children": {
+                    "completion.n.01": {
+                      "label": "Completion_Status",
+                      "description": "Status indicators for case completion and progress",
+                      "wordnet_synsets": ["completion.n.01"]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "measure.n.02": {
+          "label": "Measurements",
+          "children": {
+            "quantity.n.01": {
+              "label": "Quantities",
+              "children": {
+                "amount.n.01": {
+                  "label": "Amounts",
+                  "description": "Numerical amounts and quantities",
+                  "wordnet_synsets": ["amount.n.01"]
+                },
+                "count.n.02": {
+                  "label": "Counts_and_Cardinals",
+                  "description": "Count numbers and cardinal values",
+                  "wordnet_synsets": ["count.n.02"]
+                },
+                "percent.n.01": {
+                  "label": "Percentages",
+                  "description": "Percentage values and proportions",
+                  "wordnet_synsets": ["percent.n.01"]
+                }
+              }
+            },
+            "time_period.n.01": {
+              "label": "Time_Periods",
+              "description": "Duration and time period measurements",
+              "wordnet_synsets": ["time_period.n.01"]
+            },
+            "money.n.02": {
+              "label": "Monetary_Values",
+              "children": {
+                "value.n.01": {
+                  "label": "Property_Values",
+                  "description": "Monetary values and property valuations",
+                  "wordnet_synsets": ["value.n.01"]
+                }
+              }
+            },
+            "margin.n.01": {
+              "label": "Margins_of_Error",
+              "children": {
+                "uncertainty.n.01": {
+                  "label": "Evidence_Margins_of_Error",
+                  "description": "Uncertainty and error margins in evidence",
+                  "wordnet_synsets": ["uncertainty.n.01"]
+                }
+              }
+            }
+          }
+        },
+        "relation.n.01": {
+          "label": "Relations",
+          "children": {
+            "relationship.n.01": {
+              "label": "Relationships",
+              "children": {
+                "acquaintance.n.01": {
+                  "label": "Acquaintances",
+                  "description": "Known persons and acquaintances",
+                  "wordnet_synsets": ["acquaintance.n.01"]
+                },
+                "relative.n.01": {
+                  "label": "Victim_Offender_Relationships",
+                  "description": "Relationships between victims and offenders",
+                  "wordnet_synsets": ["relative.n.01"]
+                }
+              }
+            },
+            "association.n.01": {
+              "label": "Associations",
+              "description": "Organizational and group associations",
+              "wordnet_synsets": ["association.n.01"]
+            },
+            "ownership.n.01": {
+              "label": "Ownership_Relations",
+              "description": "Property ownership relationships",
+              "wordnet_synsets": ["ownership.n.01"]
+            },
+            "possession.n.02": {
+              "label": "Possession",
+              "description": "Items and property in possession",
+              "wordnet_synsets": ["possession.n.02"]
+            },
+            "connection.n.01": {
+              "label": "Entity_Code_Connections",
+              "description": "Connections between entities and codes",
+              "wordnet_synsets": ["connection.n.01"]
+            }
+          }
+        },
+        "procedure.n.01": {
+          "label": "Procedural_Elements",
+          "children": {
+            "arrest.n.01": {
+              "label": "Arrest_Information",
+              "children": {
+                "warrant.n.01": {
+                  "label": "Arrest_Types",
+                  "description": "Types of arrests and warrant information",
+                  "wordnet_synsets": ["warrant.n.01"]
+                }
+              }
+            },
+            "clearance.n.01": {
+              "label": "Case_Clearance",
+              "children": {
+                "resolution.n.01": {
+                  "label": "Clearance_Types",
+                  "description": "Methods and types of case resolution",
+                  "wordnet_synsets": ["resolution.n.01"]
+                },
+                "exception.n.01": {
+                  "label": "Exceptional_Clearances",
+                  "description": "Exceptional clearance circumstances",
+                  "wordnet_synsets": ["exception.n.01"]
+                }
+              }
+            },
+            "disposition.n.01": {
+              "label": "Legal_Dispositions",
+              "description": "Legal outcomes and case dispositions",
+              "wordnet_synsets": ["disposition.n.01"]
+            }
+          }
+        }
+      }
+    },
+    "physical_entity.n.01": {
+      "label": "Physical_Entities",
+      "children": {
+        "object.n.01": {
+          "label": "Objects",
+          "children": {
+            "artifact.n.01": {
+              "label": "Artifacts",
+              "children": {
+                "clothing.n.01": {
+                  "label": "Clothing",
+                  "children": {
+                    "garment.n.01": {
+                      "label": "Garments",
+                      "children": {
+                        "shirt.n.01": {
+                          "label": "Shirt_Descriptions",
+                          "description": "Shirt types and descriptions",
+                          "wordnet_synsets": ["shirt.n.01"]
+                        },
+                        "trouser.n.01": {
+                          "label": "Pants_Descriptions",
+                          "description": "Pants and trouser descriptions",
+                          "wordnet_synsets": ["trouser.n.01"]
+                        }
+                      }
+                    },
+                    "footwear.n.01": {
+                      "label": "Footwear_Descriptions",
+                      "children": {
+                        "shoe.n.01": {
+                          "label": "Shoes",
+                          "description": "Shoe types and footwear descriptions",
+                          "wordnet_synsets": ["shoe.n.01"]
+                        }
+                      }
+                    },
+                    "accessory.n.01": {
+                      "label": "Clothing_Accessories",
+                      "description": "Clothing accessories and supplementary items",
+                      "wordnet_synsets": ["accessory.n.01"]
+                    }
+                  }
+                },
+                "weapon.n.01": {
+                  "label": "Weapons",
+                  "children": {
+                    "arm.n.01": {
+                      "label": "Arms",
+                      "description": "Weapons and arms used in incidents",
+                      "wordnet_synsets": ["arm.n.01"]
+                    },
+                    "armament.n.01": {
+                      "label": "Armaments",
+                      "description": "Military and tactical armaments",
+                      "wordnet_synsets": ["armament.n.01"]
+                    }
+                  }
+                },
+                "vehicle.n.01": {
+                  "label": "Vehicles",
+                  "children": {
+                    "motor_vehicle.n.01": {
+                      "label": "Motor_Vehicles",
+                      "children": {
+                        "automobile.n.01": {
+                          "label": "Automobiles",
+                          "description": "Cars and automotive vehicles",
+                          "wordnet_synsets": ["automobile.n.01"]
+                        }
+                      }
+                    }
+                  }
+                },
+                "tool.n.01": {
+                  "label": "Tools_Used",
+                  "children": {
+                    "implement.n.01": {
+                      "label": "Implements",
+                      "description": "Tools and implements used in incidents",
+                      "wordnet_synsets": ["implement.n.01"]
+                    }
+                  }
+                },
+                "structure.n.01": {
+                  "label": "Structures",
+                  "children": {
+                    "building.n.01": {
+                      "label": "Buildings",
+                      "description": "Buildings and constructed structures",
+                      "wordnet_synsets": ["building.n.01"]
+                    },
+                    "facility.n.01": {
+                      "label": "Facilities",
+                      "description": "Facilities and institutional structures",
+                      "wordnet_synsets": ["facility.n.01"]
+                    },
+                    "premise.n.01": {
+                      "label": "Specific_Facilities",
+                      "children": {
+                        "address.n.01": {
+                          "label": "Street_Addresses",
+                          "description": "Street addresses and location identifiers",
+                          "wordnet_synsets": ["address.n.01"]
+                        },
+                        "landmark.n.01": {
+                          "label": "Landmarks",
+                          "description": "Notable landmarks and reference points",
+                          "wordnet_synsets": ["landmark.n.01"]
+                        }
+                      }
+                    }
+                  }
+                },
+                "evidence.n.01": {
+                  "label": "Evidence_Types",
+                  "children": {
+                    "fingerprint.n.01": {
+                      "label": "Fingerprint_Evidence",
+                      "description": "Fingerprint and biometric evidence",
+                      "wordnet_synsets": ["fingerprint.n.01"]
+                    },
+                    "footage.n.01": {
+                      "label": "Video_Evidence",
+                      "description": "Video recordings and surveillance footage",
+                      "wordnet_synsets": ["footage.n.01"]
+                    },
+                    "statement.n.01": {
+                      "label": "Witness_Statements",
+                      "description": "Statements provided by witnesses",
+                      "wordnet_synsets": ["statement.n.01"]
+                    },
+                    "testimony.n.01": {
+                      "label": "Victim_Statements",
+                      "description": "Testimonies and victim statements",
+                      "wordnet_synsets": ["testimony.n.01"]
+                    }
+                  }
+                },
+                "document.n.01": {
+                  "label": "Documents_and_Works",
+                  "children": {
+                    "law.n.01": {
+                      "label": "Legal_Documents",
+                      "description": "Legal documents and statutes",
+                      "wordnet_synsets": ["law.n.01"]
+                    },
+                    "work_of_art.n.01": {
+                      "label": "Works_and_Titles",
+                      "description": "Artistic works and titled documents",
+                      "wordnet_synsets": ["work_of_art.n.01"]
+                    }
+                  }
+                }
+              }
+            },
+            "property.n.01": {
+              "label": "Property_Categories",
+              "children": {
+                "belongings.n.01": {
+                  "label": "Stolen_Property",
+                  "children": {
+                    "item.n.01": {
+                      "label": "Stolen_Items",
+                      "description": "Items reported as stolen or missing",
+                      "wordnet_synsets": ["item.n.01"]
+                    }
+                  }
+                },
+                "damage.n.01": {
+                  "label": "Damaged_Property",
+                  "description": "Property that has been damaged",
+                  "wordnet_synsets": ["damage.n.01"]
+                },
+                "recovery.n.01": {
+                  "label": "Recovered_Property",
+                  "description": "Property that has been recovered",
+                  "wordnet_synsets": ["recovery.n.01"]
+                }
+              }
+            }
+          }
+        },
+        "causal_agent.n.01": {
+          "label": "Agents",
+          "children": {
+            "person.n.01": {
+              "label": "Persons",
+              "children": {
+                "victim.n.01": {
+                  "label": "Victims",
+                  "description": "Persons who are victims of crimes",
+                  "wordnet_synsets": ["victim.n.01"]
+                },
+                "suspect.n.01": {
+                  "label": "Suspects",
+                  "description": "Persons suspected of criminal activity",
+                  "wordnet_synsets": ["suspect.n.01"]
+                },
+                "perpetrator.n.01": {
+                  "label": "Perpetrators",
+                  "description": "Persons who committed criminal acts",
+                  "wordnet_synsets": ["perpetrator.n.01"]
+                },
+                "witness.n.01": {
+                  "label": "Witnesses",
+                  "description": "Persons who witnessed events or incidents",
+                  "wordnet_synsets": ["witness.n.01"]
+                },
+                "officer.n.01": {
+                  "label": "Officers",
+                  "description": "Law enforcement officers and officials",
+                  "wordnet_synsets": ["officer.n.01"]
+                },
+                "offender.n.01": {
+                  "label": "Offenders",
+                  "description": "Persons who have committed offenses",
+                  "wordnet_synsets": ["offender.n.01"]
+                },
+                "relative.n.01": {
+                  "label": "Relatives",
+                  "description": "Family members and relatives",
+                  "wordnet_synsets": ["relative.n.01"]
+                },
+                "stranger.n.01": {
+                  "label": "Strangers",
+                  "description": "Unknown persons or strangers",
+                  "wordnet_synsets": ["stranger.n.01"]
+                },
+                "individual.n.01": {
+                  "label": "Named_Individuals",
+                  "description": "Specifically named individuals",
+                  "wordnet_synsets": ["individual.n.01"]
+                },
+                "arrestee.n.01": {
+                  "label": "Arrestees",
+                  "description": "Persons who have been arrested",
+                  "wordnet_synsets": ["person.n.01"]
+                }
+              }
+            },
+            "organization.n.01": {
+              "label": "Organizations",
+              "children": {
+                "agency.n.01": {
+                  "label": "Agencies",
+                  "description": "Government and law enforcement agencies",
+                  "wordnet_synsets": ["agency.n.01"]
+                },
+                "police.n.01": {
+                  "label": "Police",
+                  "description": "Police departments and law enforcement",
+                  "wordnet_synsets": ["police.n.01"]
+                },
+                "company.n.01": {
+                  "label": "Companies",
+                  "description": "Commercial companies and corporations",
+                  "wordnet_synsets": ["company.n.01"]
+                },
+                "business.n.01": {
+                  "label": "Businesses",
+                  "description": "Business establishments and enterprises",
+                  "wordnet_synsets": ["business.n.01"]
+                },
+                "institution.n.01": {
+                  "label": "Institutions",
+                  "description": "Educational and institutional organizations",
+                  "wordnet_synsets": ["institution.n.01"]
+                }
+              }
+            },
+            "group.n.01": {
+              "label": "Person_Groups",
+              "children": {
+                "nation.n.01": {
+                  "label": "Nationalities",
+                  "description": "National and citizenship identifiers",
+                  "wordnet_synsets": ["nation.n.01"]
+                },
+                "religious_group.n.01": {
+                  "label": "Religious_Groups",
+                  "description": "Religious affiliations and groups",
+                  "wordnet_synsets": ["organization.n.01"]
+                },
+                "ethnic_group.n.01": {
+                  "label": "Ethnic_Groups",
+                  "description": "Ethnic and cultural group identifiers",
+                  "wordnet_synsets": ["ethnic_group.n.01"]
+                }
+              }
+            }
+          }
+        },
+        "substance.n.01": {
+          "label": "Substances",
+          "children": {
+            "drug.n.01": {
+              "label": "Drugs",
+              "children": {
+                "narcotic.n.01": {
+                  "label": "Narcotics",
+                  "description": "Narcotic substances and drugs",
+                  "wordnet_synsets": ["narcotic.n.01"]
+                },
+                "controlled_substance.n.01": {
+                  "label": "Controlled_Substances",
+                  "description": "Legally controlled substances",
+                  "wordnet_synsets": ["controlled_substance.n.01"]
+                }
+              }
+            }
+          }
+        },
+        "location.n.01": {
+          "label": "Locations",
+          "children": {
+            "geographical_area.n.01": {
+              "label": "Geopolitical_Entities",
+              "children": {
+                "country.n.01": {
+                  "label": "Countries",
+                  "description": "National territories and countries",
+                  "wordnet_synsets": ["country.n.01"]
+                },
+                "state.n.01": {
+                  "label": "States",
+                  "description": "State and provincial jurisdictions",
+                  "wordnet_synsets": ["state.n.01"]
+                },
+                "city.n.01": {
+                  "label": "Cities",
+                  "description": "Cities and urban municipalities",
+                  "wordnet_synsets": ["city.n.01"]
+                },
+                "municipality.n.01": {
+                  "label": "Municipalities",
+                  "description": "Municipal and local government areas",
+                  "wordnet_synsets": ["municipality.n.01"]
+                }
+              }
+            },
+            "natural_object.n.01": {
+              "label": "Geographic_Features",
+              "children": {
+                "environment.n.01": {
+                  "label": "Environment_Types",
+                  "description": "Natural environments and geographic features",
+                  "wordnet_synsets": ["environment.n.01"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "psychological_feature.n.01": {
+      "label": "Psychological_Features",
+      "children": {
+        "event.n.01": {
+          "label": "Events",
+          "children": {
+            "occurrence.n.01": {
+              "label": "Occurrences",
+              "description": "General occurrences and happenings",
+              "wordnet_synsets": ["occurrence.n.01"]
+            },
+            "activity.n.01": {
+              "label": "Activities",
+              "children": {
+                "crime.n.01": {
+                  "label": "Crimes",
+                  "children": {
+                    "offense.n.01": {
+                      "label": "Offenses",
+                      "description": "Criminal offenses and violations",
+                      "wordnet_synsets": ["offense.n.01"]
+                    },
+                    "assault.n.01": {
+                      "label": "Assaults",
+                      "description": "Physical assaults and attacks",
+                      "wordnet_synsets": ["assault.n.01"]
+                    },
+                    "homicide.n.01": {
+                      "label": "Homicides",
+                      "description": "Homicides and related violent crimes",
+                      "wordnet_synsets": ["homicide.n.01"]
+                    },
+                    "classification.n.01": {
+                      "label": "Crime_Classifications",
+                      "description": "Crime classification categories",
+                      "wordnet_synsets": ["classification.n.01"]
+                    }
+                  }
+                },
+                "method.n.01": {
+                  "label": "Criminal_Activities",
+                  "children": {
+                    "sequence.n.01": {
+                      "label": "Event_Sequences",
+                      "description": "Sequences of events and activities",
+                      "wordnet_synsets": ["sequence.n.01"]
+                    }
+                  }
+                },
+                "escape.n.01": {
+                  "label": "Escape_Methods",
+                  "description": "Methods and means of escape",
+                  "wordnet_synsets": ["escape.n.01"]
+                }
+              }
+            }
+          }
+        },
+        "cognition.n.01": {
+          "label": "Cognitive_Elements",
+          "children": {
+            "content.n.05": {
+              "label": "Mental_Content",
+              "children": {
+                "belief.n.01": {
+                  "label": "Beliefs",
+                  "children": {
+                    "bias.n.01": {
+                      "label": "Bias_Motivations",
+                      "description": "Bias-related motivations and prejudices",
+                      "wordnet_synsets": ["bias.n.01"]
+                    },
+                    "prejudice.n.01": {
+                      "label": "Prejudices",
+                      "description": "Prejudicial attitudes and beliefs",
+                      "wordnet_synsets": ["prejudice.n.01"]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "state.n.02": {
+          "label": "Mental_and_Emotional_States",
+          "children": {
+            "use.n.01": {
+              "label": "Substance_Use_Indicators",
+              "description": "Indicators of substance use and impairment",
+              "wordnet_synsets": ["use.n.01"]
+            }
+          }
+        }
+      }
+    },
+    "time.n.01": {
+      "label": "Temporal_Elements",
+      "children": {
+        "date.n.01": {
+          "label": "Dates_and_Periods",
+          "children": {
+            "calendar_date.n.01": {
+              "label": "Incident_Dates",
+              "children": {
+                "beginning.n.01": {
+                  "label": "Start_Dates",
+                  "description": "Beginning dates and start times",
+                  "wordnet_synsets": ["beginning.n.01"]
+                },
+                "end.n.01": {
+                  "label": "End_Dates",
+                  "description": "End dates and completion times",
+                  "wordnet_synsets": ["end.n.01"]
+                }
+              }
+            },
+            "processing_date.n.01": {
+              "label": "Processing_Dates",
+              "description": "Administrative processing dates",
+              "wordnet_synsets": ["date.n.01"]
+            }
+          }
+        },
+        "hour.n.01": {
+          "label": "Times",
+          "children": {
+            "start_time.n.01": {
+              "label": "Start_Times",
+              "description": "Starting times and commencement hours",
+              "wordnet_synsets": ["time.n.01"]
+            },
+            "end_time.n.01": {
+              "label": "End_Times",
+              "description": "Ending times and conclusion hours",
+              "wordnet_synsets": ["time.n.01"]
+            }
+          }
+        }
+      }
+    },
+    "communication.n.01": {
+      "label": "Communication_Attributes",
+      "children": {
+        "language.n.01": {
+          "label": "Languages",
+          "description": "Language specifications and communication methods",
+          "wordnet_synsets": ["language.n.01"]
+        }
+      }
+    },
+    "force.n.01": {
+      "label": "Force_Categories",
+      "children": {
+        "violence.n.01": {
+          "label": "Physical_Force",
+          "description": "Physical violence and force used",
+          "wordnet_synsets": ["violence.n.01"]
+        },
+        "threat.n.01": {
+          "label": "Verbal_Force",
+          "description": "Threats and verbal intimidation",
+          "wordnet_synsets": ["threat.n.01"]
+        },
+        "compulsion.n.01": {
+          "label": "Other_Force",
+          "description": "Coercion and other forms of force",
+          "wordnet_synsets": ["compulsion.n.01"]
+        }
+      }
+    },
+    "harm.n.01": {
+      "label": "Physical_Effects",
+      "children": {
+        "injury.n.01": {
+          "label": "Injury_Types",
+          "children": {
+            "trauma.n.01": {
+              "label": "Physical_Harm",
+              "description": "Physical trauma and bodily harm",
+              "wordnet_synsets": ["trauma.n.01"]
+            }
+          }
+        },
+        "loss.n.01": {
+          "label": "Victim_Impact",
+          "children": {
+            "damage.n.03": {
+              "label": "Abstract_Harm",
+              "description": "Psychological and abstract harm to victims",
+              "wordnet_synsets": ["damage.n.03"]
+            }
+          }
+        }
+      }
+    },
+    "information.n.01": {
+      "label": "Administrative_Metadata",
+      "children": {
+        "identifier.n.01": {
+          "label": "Identifiers",
+          "children": {
+            "code.n.01": {
+              "label": "Agency_Identifiers",
+              "description": "Agency codes and institutional identifiers",
+              "wordnet_synsets": ["code.n.01"]
+            },
+            "number.n.02": {
+              "label": "Case_Numbers",
+              "description": "Case numbers and reference identifiers",
+              "wordnet_synsets": ["number.n.02"]
+            }
+          }
+        },
+        "indicator.n.01": {
+          "label": "System_Indicators",
+          "description": "System flags and processing indicators",
+          "wordnet_synsets": ["indicator.n.01"]
+        }
+      }
+    }
+  }
+}
