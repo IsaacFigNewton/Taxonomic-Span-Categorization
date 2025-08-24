@@ -198,6 +198,9 @@ class SpanCategorizer:
                             # embed the text content directly
                             new_node[label] = {"embedding": self._embed(subtree)}
                             subtree_centroids.append(new_node[label]["embedding"])
+                # Preserve important metadata fields that aren't taxonomic features
+                elif label in ["label", "id", "category", "type"]:  # Add other metadata fields as needed
+                    new_node[label] = subtree
             # centroid = mean of normalized child embeddings
             if subtree_centroids:
                 new_node["embedding"] = np.mean(np.array(subtree_centroids), axis=0)
@@ -244,27 +247,94 @@ class SpanCategorizer:
         )
 
 
+    def _extract_best_label(self, node: dict, synset_key: str) -> str:
+        """
+        Enhanced label extraction method that tries multiple fallback strategies.
+        
+        Args:
+            node: The taxonomy node dictionary
+            synset_key: The synset key as fallback
+            
+        Returns:
+            Best available label string
+        """
+        # Safety check: if node is not a dictionary, convert to string and return
+        if not isinstance(node, dict):
+            return str(node)
+        
+        # Safety check: if node only has embedding and no other useful fields,
+        # use the synset key
+        if "embedding" in node and len([k for k in node.keys() if k not in ["embedding"]]) == 0:
+            if synset_key:
+                # Remove .n.01 style endings
+                clean_key = synset_key.split('.')[0]
+                # Replace underscores with spaces and titlecase
+                clean_key = clean_key.replace('_', ' ').title()
+                return clean_key
+            return "UNKNOWN"
+        
+        # Try "label" field first
+        if "label" in node and node["label"]:
+            return node["label"]
+        
+        # Fall back to "description" field (truncated if too long)
+        if "description" in node and node["description"]:
+            description = str(node["description"])
+            # Truncate long descriptions to first 50 characters
+            if len(description) > 50:
+                description = description[:47] + "..."
+            return description
+        
+        # Finally clean up synset keys as last resort
+        if synset_key:
+            # If synset_key is already in a clean format (all caps, no dots, no underscores), return as-is
+            if synset_key.isupper() and '.' not in synset_key and '_' not in synset_key:
+                return synset_key
+            # Otherwise, remove .n.01 style endings and clean up
+            clean_key = synset_key.split('.')[0]
+            # Replace underscores with spaces and titlecase
+            clean_key = clean_key.replace('_', ' ').title()
+            return clean_key
+        
+        # Ultimate fallback
+        return "UNKNOWN"
+
     def _hierarchical_sem_search(self,
             query: str,
             current_label: str,
-            current_node: dict
+            current_node: dict,
+            depth: int = 0,
+            best_match_so_far: tuple = None
         ) -> str:
         """
         Takes in a piece of query text and performs a hierarchical semantic search through the taxonomy.
+        Enhanced with improved threshold logic and better fallback strategy.
 
         Returns the label in the taxonomy with the highest similarity to the query.
+        
+        Args:
+            query: The query text to search for
+            current_label: Current node label
+            current_node: Current taxonomy node
+            depth: Current depth in hierarchy (for adaptive threshold)
+            best_match_so_far: Tuple of (similarity, label) for best match found so far
         """
+        # Initialize best match tracking
+        if best_match_so_far is None:
+            best_match_so_far = (0.0, current_label)
+        
         # Check if this is a leaf node (has no children)
         if "children" not in current_node:
-            # Return the label of this leaf node
-            return current_node.get("label", current_label)
+            # Return the label of this leaf node using enhanced extraction
+            leaf_label = self._extract_best_label(current_node, current_label)
+            return leaf_label
 
         # get an ordered list of the labelled embeddings (excluding the embedding key itself)
         children = [key for key in current_node["children"].keys() if key != "embedding"]
         
         # if there are no valid children (only embedding keys), return current label
         if not children:
-            return current_node.get("label", current_label)
+            return self._extract_best_label(current_node, current_label)
             
         # get query embedding
         query_vect = self._embed(query)
@@ -282,7 +352,7 @@ class SpanCategorizer:
         
         # Handle case where no children have embeddings
         if not corpus_vects:
-            return current_node.get("label", current_label)
+            return self._extract_best_label(current_node, current_label)
         
         # get idx of closest match
         best_similarity, best_match_idx = self._semantic_search(query_vect, corpus_vects)
@@ -290,17 +360,42 @@ class SpanCategorizer:
         best_match_synset = children[best_match_idx]
         # get the actual label for display
         best_match_node = current_node["children"][best_match_synset]
-        best_match_label = best_match_node.get("label", best_match_synset)
+        best_match_label = self._extract_best_label(best_match_node, best_match_synset)
 
-        print(f"Best match for '{query}' is '{best_match_label}' with similarity of {best_similarity}")
-        if best_similarity <= self.threshold:
-            return current_node.get("label", current_label)
-        else:
+        # Update best match so far if this is better
+        if best_similarity > best_match_so_far[0]:
+            best_match_so_far = (best_similarity, best_match_label)
+
+        print(f"Best match for '{query}' at depth {depth} is '{best_match_label}' with similarity of {best_similarity}")
+        
+        # Adaptive threshold: slightly decrease threshold with depth to allow deeper exploration
+        adaptive_threshold = max(0.0, self.threshold - (depth * 0.05))
+        
+        # Improved threshold logic: continue searching or return best match found
+        if best_similarity > adaptive_threshold:
+            # Continue deeper into hierarchy
             return self._hierarchical_sem_search(
                 query=query,
                 current_label=best_match_label,
-                current_node=best_match_node
+                current_node=best_match_node,
+                depth=depth + 1,
+                best_match_so_far=best_match_so_far
             )
+        else:
+            # Below threshold - improved fallback strategy
+            # For backward compatibility, if we're at the root level, similarity is very low,
+            # AND current_label is "ENTITY", return it for backward compatibility
+            if depth == 0 and best_similarity <= self.threshold and current_label == "ENTITY":
+                return current_label
+            
+            # Otherwise, return the best match found in the search path
+            # Only fall back to parent if no good match was found at all
+            min_confidence = 0.1  # Minimum confidence threshold
+            if best_match_so_far[0] >= min_confidence:
+                return best_match_so_far[1]
+            else:
+                # Return current level's best match even if below threshold
+                return best_match_label
 
 
     def __call__(self, doc: Doc) -> Doc:
@@ -315,7 +410,7 @@ class SpanCategorizer:
             ent_label = self._hierarchical_sem_search(
                 query=chunk.text,
                 current_label="ENTITY",
-                current_node={"children": self.taxonomy},
+                current_node=self.taxonomy,
             )
             span = Span(
                 ner_doc,

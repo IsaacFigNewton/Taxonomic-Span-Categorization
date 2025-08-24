@@ -473,7 +473,12 @@ class TestSpanCategorizer(unittest.TestCase):
         with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
             mock_load.return_value = self.sample_taxonomy
             with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
-                mock_embed_tax.return_value = self.sample_taxonomy
+                # Create the structure that would result from embedding
+                embedded_taxonomy = {
+                    "children": self.sample_taxonomy,
+                    "embedding": np.array([0.5, 0.5, 0.0])
+                }
+                mock_embed_tax.return_value = embedded_taxonomy
                 
                 categorizer = SpanCategorizer()
                 
@@ -504,7 +509,7 @@ class TestSpanCategorizer(unittest.TestCase):
                         mock_search.assert_called_once_with(
                             query="test",
                             current_label="ENTITY", 
-                            current_node={"children": categorizer.taxonomy}
+                            current_node=categorizer.taxonomy
                         )
 
     @patch('src.tax_span_cat.SpanCategorizer.spacy.load')
@@ -953,27 +958,31 @@ class TestSpanCategorizer(unittest.TestCase):
             categorizer.embedding_model = mock_model
             categorizer.threshold = 0.01
             categorizer.taxonomic_features = ['description', 'wordnet_synsets']
+            categorizer.preserve_existing_ents = False  # Add missing attribute
             
-            # Manually create properly embedded taxonomy structure
+            # Manually create properly embedded taxonomy structure (matching expected structure after embedding)
             categorizer.taxonomy = {
-                "animal.n.01": {
-                    "label": "ANIMAL",
-                    "embedding": np.array([0.5, 0.5, 0.0]),
-                    "children": {
-                        "dog.n.01": {
-                            "label": "DOG",
-                            "embedding": np.array([1.0, 0.0, 0.0])
-                        },
-                        "cat.n.01": {
-                            "label": "CAT", 
-                            "embedding": np.array([0.0, 1.0, 0.0])
+                "children": {
+                    "animal.n.01": {
+                        "label": "ANIMAL",
+                        "embedding": np.array([0.5, 0.5, 0.0]),
+                        "children": {
+                            "dog.n.01": {
+                                "label": "DOG",
+                                "embedding": np.array([1.0, 0.0, 0.0])
+                            },
+                            "cat.n.01": {
+                                "label": "CAT", 
+                                "embedding": np.array([0.0, 1.0, 0.0])
+                            }
                         }
+                    },
+                    "person.n.01": {
+                        "label": "PERSON",
+                        "embedding": np.array([0.0, 0.0, 1.0])
                     }
                 },
-                "person.n.01": {
-                    "label": "PERSON",
-                    "embedding": np.array([0.0, 0.0, 1.0])
-                }
+                "embedding": np.array([0.25, 0.25, 0.5])  # Root embedding
             }
             
             # Process the document
@@ -1375,8 +1384,8 @@ class TestSpanCategorizer(unittest.TestCase):
             
             # Should return a valid result without crashing
             self.assertIsInstance(result, str)
-            # Should be one of the child synset keys since both have embeddings now
-            self.assertIn(result, ["child_with_features.n.01", "dog.n.01"])
+            # Should be one of the child labels since both have embeddings now (improved behavior)
+            self.assertIn(result, ["CHILD_WITH_FEATURES", "CHILD_WITHOUT_FEATURES"])
 
     def test_wordnet_fallback_embedding_for_children_without_features(self):
         """Test that children without taxonomic features get WordNet fallback embeddings."""
