@@ -383,18 +383,19 @@ class SpanCategorizer:
             )
         else:
             # Below threshold - improved fallback strategy
-            # For backward compatibility, if we're at the root level, similarity is very low,
-            # AND current_label is "ENTITY", return it for backward compatibility
-            if depth == 0 and best_similarity <= self.threshold and current_label == "ENTITY":
+            # Only fall back to "ENTITY" if the similarity is extremely low (< 0.15)
+            # This prevents good matches from being discarded due to conservative thresholds
+            if depth == 0 and best_similarity < 0.15 and current_label == "ENTITY":
                 return current_label
             
             # Otherwise, return the best match found in the search path
-            # Only fall back to parent if no good match was found at all
-            min_confidence = 0.1  # Minimum confidence threshold
+            # Use a lower minimum confidence to be more permissive
+            min_confidence = 0.05  # Lower minimum confidence threshold
             if best_match_so_far[0] >= min_confidence:
                 return best_match_so_far[1]
             else:
                 # Return current level's best match even if below threshold
+                # This ensures we get specific labels rather than falling back to ENTITY
                 return best_match_label
 
 
