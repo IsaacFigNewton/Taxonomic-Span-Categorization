@@ -354,53 +354,7 @@ class TestGeneralNERTaxonomy(unittest.TestCase):
         self.assertIn(result, possible_labels,
                      f"Should find a valid label in the hierarchy, got: {result}")
     
-    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
-    def test_threshold_behavior(self, mock_sentence_transformer):
-        """Test that threshold properly controls classification depth"""
-        mock_model = Mock()
-        mock_model.encode.side_effect = lambda texts: [self.get_mock_embedding(texts[0])]
-        mock_sentence_transformer.return_value = mock_model
-        
-        # Get the path to general_ner.json
-        taxonomy_path = Path(__file__).parent.parent / "src" / "tax_span_cat" / "taxonomies" / "general_ner.json"
-        
-        # Test with high threshold (should stop early)
-        categorizer_high = SpanCategorizer(taxonomy_path=str(taxonomy_path), threshold=0.95)
-        
-        # Set up simple embedded taxonomy
-        test_taxonomy = {
-            "physical_entity.n.01": {
-                "label": "Physical_Entities",
-                "embedding": np.array([0.3, 0.7, 0.0, 0.0] + [0.0] * 380),
-                "children": {}
-            }
-        }
-        categorizer_high.taxonomy = test_taxonomy
-        
-        result_high = categorizer_high._hierarchical_sem_search(
-            query="victim",
-            current_label="ENTITY",
-            current_node={"children": test_taxonomy}
-        )
-        
-        # With high threshold and low similarity, should return ENTITY
-        self.assertEqual(result_high, "ENTITY", 
-                        "High threshold should prevent deep traversal with low similarity")
-        
-        # Test with low threshold (should go deeper)
-        categorizer_low = SpanCategorizer(taxonomy_path=str(taxonomy_path), threshold=0.1)
-        categorizer_low.taxonomy = test_taxonomy
-        
-        result_low = categorizer_low._hierarchical_sem_search(
-            query="victim",
-            current_label="ENTITY",
-            current_node={"children": test_taxonomy}
-        )
-        
-        # With low threshold, should traverse to Physical_Entities
-        self.assertEqual(result_low, "Physical_Entities",
-                        "Low threshold should allow traversal even with lower similarity")
-    
+
     @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
     def test_complex_document_processing(self, mock_sentence_transformer):
         """Test processing a complex document with multiple entity types"""

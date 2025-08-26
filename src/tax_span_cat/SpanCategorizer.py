@@ -27,7 +27,7 @@ class SpanCategorizer:
                  embedding_model: str = "all-MiniLM-L6-v2",
                  taxonomy: Optional[Dict] = None,
                  taxonomy_path: Optional[str] = None,
-                 threshold: float = 0.5,
+                 threshold: float = 0.001,
                  taxonomic_features: List[str]|None = None,
                  preserve_existing_ents: bool = False):
         # taxonomic features to include in taxonomic embeddings
@@ -40,7 +40,8 @@ class SpanCategorizer:
 
         self._init_embedding_model(embedding_model)
         self._init_taxonomy(taxonomy, taxonomy_path)
-        # similarity threshold for assigning a particular label
+        # similarity difference threshold for recursing deeper in hierarchy
+        # (difference between best and second-best match)
         self.threshold = threshold
     
     
@@ -227,23 +228,52 @@ class SpanCategorizer:
     def _semantic_search(self,
             query_vect: np.ndarray,
             corpus_vects: List[np.ndarray]
-        ) -> int:
+        ) -> tuple:
         """
         Takes in a query vector and a list of corpus vectors
         
         Returns:
         - the cosine similarity of the best match
         - the index of the best match
+        - the difference between best and second-best similarity
         """
         similarities = cosine_similarity(
             np.array([query_vect]),
             np.array(corpus_vects)
         )[0]
-        highest_similarity = max(similarities)
-        best_match_idx = np.argmax(similarities)
+        
+        # Normalize similarities using min-max scaling to 0-1 range
+        if len(similarities) > 1:
+            min_sim = np.min(similarities)
+            max_sim = np.max(similarities)
+            if max_sim > min_sim:  # Avoid division by zero
+                normalized_similarities = (similarities - min_sim) / (max_sim - min_sim)
+            else:
+                # All similarities are the same, set to 0.5
+                normalized_similarities = np.full_like(similarities, 0.5)
+        else:
+            # Single similarity, normalize to 1.0
+            normalized_similarities = np.array([1.0])
+        
+        # Sort normalized similarities in descending order and get indices
+        sorted_indices = np.argsort(normalized_similarities)[::-1]
+        sorted_normalized_similarities = normalized_similarities[sorted_indices]
+        
+        # Use original similarities for return value (for backward compatibility)
+        highest_similarity = similarities[sorted_indices[0]]
+        best_match_idx = sorted_indices[0]
+        
+        # Calculate difference between first and second best using normalized values
+        if len(sorted_normalized_similarities) > 1:
+            similarity_difference = sorted_normalized_similarities[0] - sorted_normalized_similarities[1]
+        else:
+            # Only one option, so difference is the normalized similarity itself
+            similarity_difference = sorted_normalized_similarities[0]
+        
         return (
             highest_similarity,
-            best_match_idx
+            best_match_idx,
+            similarity_difference
         )
 
 
@@ -355,7 +385,7 @@ class SpanCategorizer:
             return self._extract_best_label(current_node, current_label)
         
         # get idx of closest match
-        best_similarity, best_match_idx = self._semantic_search(query_vect, corpus_vects)
+        best_similarity, best_match_idx, similarity_difference = self._semantic_search(query_vect, corpus_vects)
         # get synset key of closest match
         best_match_synset = children[best_match_idx]
         # get the actual label for display
@@ -366,13 +396,13 @@ class SpanCategorizer:
         if best_similarity > best_match_so_far[0]:
             best_match_so_far = (best_similarity, best_match_label)
 
-        print(f"Best match for '{query}' at depth {depth} is '{best_match_label}' with similarity of {best_similarity}")
+        print(f"Best match for '{query}' at depth {depth} is '{best_match_label}' with similarity of {best_similarity}, difference: {similarity_difference}")
         
         # Adaptive threshold: slightly decrease threshold with depth to allow deeper exploration
-        adaptive_threshold = max(0.0, self.threshold - (depth * 0.05))
+        adaptive_threshold = max(0.0, self.threshold/(depth + 1) )  # Avoid negative thresholds
         
-        # Improved threshold logic: continue searching or return best match found
-        if best_similarity > adaptive_threshold:
+        # Use difference-based thresholding: continue searching if difference is above threshold
+        if similarity_difference > adaptive_threshold:
             # Continue deeper into hierarchy
             return self._hierarchical_sem_search(
                 query=query,
@@ -385,18 +415,13 @@ class SpanCategorizer:
             # Below threshold - improved fallback strategy
             # Only fall back to "ENTITY" if the similarity is extremely low (< 0.15)
             # This prevents good matches from being discarded due to conservative thresholds
-            if depth == 0 and best_similarity < 0.15 and current_label == "ENTITY":
+            if depth == 0\
+                and best_similarity < 0.15\
+                    and current_label == "ENTITY":
                 return current_label
             
             # Otherwise, return the best match found in the search path
-            # Use a lower minimum confidence to be more permissive
-            min_confidence = 0.05  # Lower minimum confidence threshold
-            if best_match_so_far[0] >= min_confidence:
-                return best_match_so_far[1]
-            else:
-                # Return current level's best match even if below threshold
-                # This ensures we get specific labels rather than falling back to ENTITY
-                return best_match_label
+            return best_match_so_far[1]
 
 
     def __call__(self, doc: Doc) -> Doc:

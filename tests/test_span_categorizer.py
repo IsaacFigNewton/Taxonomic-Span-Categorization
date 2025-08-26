@@ -69,7 +69,7 @@ class TestSpanCategorizer(unittest.TestCase):
                 
                 categorizer = SpanCategorizer()
                 
-                self.assertEqual(categorizer.threshold, 0.5)
+                self.assertEqual(categorizer.threshold, 0.05)
                 mock_sentence_transformer.assert_called_once_with("all-MiniLM-L6-v2")
 
     @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
@@ -208,11 +208,208 @@ class TestSpanCategorizer(unittest.TestCase):
                 np.array([-1, 0, 0])      # Low similarity
             ]
             
-            similarity, index = categorizer._semantic_search(query_vect, corpus_vects)
+            similarity, index, difference = categorizer._semantic_search(query_vect, corpus_vects)
             
             self.assertEqual(index, 0)  # First vector should be most similar
             self.assertIsInstance(similarity, (float, np.float64))
             self.assertGreater(similarity, 0)
+            self.assertIsInstance(difference, (float, np.float64))
+            self.assertGreater(difference, 0)  # Should be positive difference
+
+    def test_semantic_search_difference_calculation(self):
+        """Test that semantic search correctly calculates similarity difference."""
+        with patch.object(SpanCategorizer, '_init_embedding_model'):
+            categorizer = SpanCategorizer.__new__(SpanCategorizer)
+            
+            query_vect = np.array([1, 0, 0])
+            corpus_vects = [
+                np.array([1.0, 0.0, 0.0]),  # Perfect match: similarity = 1.0
+                np.array([0.5, 0.5, 0.0]),  # Good match: similarity ~0.71
+                np.array([0.0, 1.0, 0.0])   # Poor match: similarity = 0.0
+            ]
+            
+            similarity, index, difference = categorizer._semantic_search(query_vect, corpus_vects)
+            
+            # Best match should be the perfect match (index 0)
+            self.assertEqual(index, 0)
+            self.assertAlmostEqual(similarity, 1.0, places=6)
+            
+            # With normalization: best (similarity=1.0) gets normalized to 1.0,
+            # second best (similarity~0.707) gets normalized to some value between 0-1
+            # The difference should be the normalized difference
+            self.assertGreater(difference, 0.0)
+            self.assertLessEqual(difference, 1.0)
+            # Since we have a perfect match vs imperfect matches, difference should be substantial
+            self.assertGreater(difference, 0.25)
+
+    def test_semantic_search_single_option(self):
+        """Test semantic search with only one option returns that option's similarity as difference."""
+        with patch.object(SpanCategorizer, '_init_embedding_model'):
+            categorizer = SpanCategorizer.__new__(SpanCategorizer)
+            
+            query_vect = np.array([1, 0, 0])
+            corpus_vects = [
+                np.array([0.8, 0.6, 0])  # Only one option
+            ]
+            
+            similarity, index, difference = categorizer._semantic_search(query_vect, corpus_vects)
+            
+            self.assertEqual(index, 0)
+            self.assertAlmostEqual(difference, 1.0, places=6)  # Difference should equal normalized similarity (1.0)
+
+    def test_semantic_search_normalization(self):
+        """Test that semantic search properly normalizes similarities before calculating difference."""
+        with patch.object(SpanCategorizer, '_init_embedding_model'):
+            categorizer = SpanCategorizer.__new__(SpanCategorizer)
+            
+            query_vect = np.array([1, 0, 0])
+            corpus_vects = [
+                np.array([0.9, 0.1, 0]),   # High similarity: ~0.894
+                np.array([0.7, 0.3, 0]),   # Medium similarity: ~0.775
+                np.array([0.5, 0.5, 0])    # Lower similarity: ~0.707
+            ]
+            
+            similarity, index, difference = categorizer._semantic_search(query_vect, corpus_vects)
+            
+            # Best match should be the first vector (highest similarity)
+            self.assertEqual(index, 0)
+            
+            # Difference should be normalized (between 0 and 1)
+            self.assertGreaterEqual(difference, 0.0)
+            self.assertLessEqual(difference, 1.0)
+            
+            # With min-max normalization:
+            # - Best similarity gets normalized to 1.0
+            # - Second best gets normalized to some value between 0 and 1
+            # - Difference should be positive and meaningful
+            self.assertGreater(difference, 0.0)
+            self.assertLess(difference, 1.0)  # Should be less than 1.0 since there are multiple options
+
+    def test_semantic_search_equal_similarities(self):
+        """Test semantic search behavior when all similarities are equal."""
+        with patch.object(SpanCategorizer, '_init_embedding_model'):
+            categorizer = SpanCategorizer.__new__(SpanCategorizer)
+            
+            query_vect = np.array([1, 0, 0])
+            corpus_vects = [
+                np.array([0.5, 0.5, 0]),   # Same similarity
+                np.array([0.5, 0.5, 0]),   # Same similarity
+                np.array([0.5, 0.5, 0])    # Same similarity
+            ]
+            
+            similarity, index, difference = categorizer._semantic_search(query_vect, corpus_vects)
+            
+            # Should pick one of them (index 0, 1, or 2)
+            self.assertIn(index, [0, 1, 2])
+            
+            # When all similarities are equal, normalized difference should be 0
+            # (all get normalized to 0.5, so difference is 0.5 - 0.5 = 0)
+            self.assertAlmostEqual(difference, 0.0, places=6)
+
+    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
+    def test_difference_based_threshold_high_difference(self, mock_sentence_transformer):
+        """Test that high difference between best and second-best allows deeper recursion."""
+        mock_model = Mock()
+        mock_model.encode.return_value = [np.array([1, 0, 0])]
+        mock_sentence_transformer.return_value = mock_model
+        
+        with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
+            mock_load.return_value = self.sample_taxonomy
+            with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
+                mock_embed_tax.return_value = self.sample_taxonomy
+                
+                categorizer = SpanCategorizer(threshold=0.2)  # Low threshold
+                
+                # Mock the embedded taxonomy structure with clear winner
+                categorizer.taxonomy = {
+                    "children": {
+                        "animal.n.01": {
+                            "label": "Animals",
+                            "embedding": np.array([0.9, 0.1, 0]),  # Very similar to query
+                            "children": {
+                                "dog.n.01": {
+                                    "label": "DOG",
+                                    "embedding": np.array([0.95, 0.05, 0])  # Even more similar
+                                }
+                            }
+                        },
+                        "object.n.01": {
+                            "label": "Objects",
+                            "embedding": np.array([0.1, 0.9, 0])  # Very different from query
+                        }
+                    }
+                }
+                
+                result = categorizer._hierarchical_sem_search(
+                    query="dog",
+                    current_label="ENTITY",
+                    current_node=categorizer.taxonomy
+                )
+                
+                # Should recurse deeper and return DOG due to high difference
+                self.assertEqual(result, "DOG")
+
+    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
+    def test_difference_based_threshold_low_difference(self, mock_sentence_transformer):
+        """Test that low normalized difference between best and second-best stops recursion."""
+        mock_model = Mock()
+        mock_model.encode.return_value = [np.array([1, 0, 0])]
+        mock_sentence_transformer.return_value = mock_model
+        
+        with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
+            mock_load.return_value = self.sample_taxonomy
+            with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
+                mock_embed_tax.return_value = self.sample_taxonomy
+                
+                categorizer = SpanCategorizer(threshold=0.8)  # Very high threshold
+                
+                # Create taxonomy with multiple similar options at top level
+                # This will create low normalized differences
+                categorizer.taxonomy = {
+                    "children": {
+                        "animal.n.01": {
+                            "label": "Animals",
+                            "embedding": np.array([0.9, 0.1, 0]),  # High similarity
+                            "children": {
+                                "dog.n.01": {
+                                    "label": "DOG",
+                                    "embedding": np.array([0.95, 0.05, 0])
+                                }
+                            }
+                        },
+                        "object.n.01": {
+                            "label": "Objects", 
+                            "embedding": np.array([0.89, 0.11, 0])  # Very similar to first option
+                        },
+                        "place.n.01": {
+                            "label": "Places",
+                            "embedding": np.array([0.88, 0.12, 0])  # Also very similar
+                        }
+                    }
+                }
+                
+                result = categorizer._hierarchical_sem_search(
+                    query="ambiguous_term",
+                    current_label="ENTITY",
+                    current_node=categorizer.taxonomy
+                )
+                
+                # With multiple very similar options, normalized difference should be small
+                # and should stop at higher level due to high threshold (0.8)
+                self.assertIn(result, ["Animals", "Objects", "Places"])  # Should return one of the top-level labels
+
+    @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
+    def test_new_default_threshold_value(self, mock_sentence_transformer):
+        """Test that the new default threshold value (0.05) is set correctly."""
+        mock_sentence_transformer.return_value = Mock()
+        
+        with patch.object(SpanCategorizer, '_load_taxonomy_from_path') as mock_load:
+            mock_load.return_value = self.sample_taxonomy
+            with patch.object(SpanCategorizer, '_embed_taxonomy') as mock_embed_tax:
+                mock_embed_tax.return_value = self.sample_taxonomy
+                
+                categorizer = SpanCategorizer()  # Use default threshold
+                self.assertEqual(categorizer.threshold, 0.05)
 
     @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
     def test_hierarchical_sem_search_above_threshold(self, mock_sentence_transformer):
@@ -244,7 +441,7 @@ class TestSpanCategorizer(unittest.TestCase):
                 
                 with patch.object(categorizer, '_semantic_search') as mock_search:
                     # First call returns high similarity, second call should also have high similarity
-                    mock_search.side_effect = [(0.8, 0), (0.2, 0)]  # First high, then low to stop recursion
+                    mock_search.side_effect = [(0.8, 0, 0.7), (0.2, 0, 0.1)]  # First high, then low to stop recursion
                     
                     result = categorizer._hierarchical_sem_search(
                         query="dog",
@@ -257,7 +454,7 @@ class TestSpanCategorizer(unittest.TestCase):
 
     @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
     def test_hierarchical_sem_search_below_threshold(self, mock_sentence_transformer):
-        """Test hierarchical search when similarity is below threshold."""
+        """Test hierarchical search when difference is below threshold."""
         mock_model = Mock()
         mock_model.encode.return_value = [np.array([1, 0, 0])]
         mock_sentence_transformer.return_value = mock_model
@@ -270,22 +467,26 @@ class TestSpanCategorizer(unittest.TestCase):
                 categorizer = SpanCategorizer(threshold=0.9)
                 
                 categorizer.taxonomy = {
-                    "causal_agent.n.01": {
-                        "label": "Animals", 
-                        "embedding": np.array([0.1, 0.9, 0])
+                    "children": {
+                        "causal_agent.n.01": {
+                            "label": "Animals", 
+                            "embedding": np.array([0.1, 0.9, 0])
+                        }
                     }
                 }
                 
                 with patch.object(categorizer, '_semantic_search') as mock_search:
-                    mock_search.return_value = (0.2, 0)  # Low similarity
+                    mock_search.return_value = (0.2, 0, 0.1)  # Low similarity, low difference
                     
                     result = categorizer._hierarchical_sem_search(
                         query="dog",
                         current_label="ENTITY",
-                        current_node={"children": categorizer.taxonomy}
+                        current_node=categorizer.taxonomy
                     )
                     
-                    self.assertEqual(result, "ENTITY")
+                    # With difference-based thresholding, low difference stops recursion
+                    # and returns the best match found (Animals in this case)
+                    self.assertEqual(result, "Animals")
 
     def test_hierarchical_sem_search_missing_children(self):
         """Test hierarchical search handles leaf nodes correctly."""
@@ -406,7 +607,7 @@ class TestSpanCategorizer(unittest.TestCase):
                 
                 categorizer = SpanCategorizer()
                 
-                self.assertEqual(categorizer.threshold, 0.5)
+                self.assertEqual(categorizer.threshold, 0.05)
 
     @patch('src.tax_span_cat.SpanCategorizer.SentenceTransformer')
     def test_default_taxonomy_path_initialization(self, mock_sentence_transformer):
@@ -435,7 +636,7 @@ class TestSpanCategorizer(unittest.TestCase):
                 
                 categorizer = SpanCategorizer()
                 
-                self.assertEqual(categorizer.threshold, 0.5)
+                self.assertEqual(categorizer.threshold, 0.05)
                 self.assertEqual(categorizer.embedding_model, mock_model)
                 mock_sentence_transformer.assert_called_once_with("all-MiniLM-L6-v2")
                 mock_load.assert_called_once_with(categorizer.default_taxonomy_path)
@@ -554,7 +755,7 @@ class TestSpanCategorizer(unittest.TestCase):
                 }
                 
                 with patch.object(categorizer, '_semantic_search') as mock_search:
-                    mock_search.return_value = (0.1, 0)
+                    mock_search.return_value = (0.1, 0, 0.05)
                     
                     result = categorizer._hierarchical_sem_search(
                         query="unrelated text",
@@ -604,7 +805,7 @@ class TestSpanCategorizer(unittest.TestCase):
                 
                 with patch.object(categorizer, '_semantic_search') as mock_search:
                     # First call returns high similarity with Animals, second call returns DOG
-                    mock_search.side_effect = [(0.8, 0), (0.8, 0)]  # High similarity for both levels
+                    mock_search.side_effect = [(0.8, 0, 0.7), (0.8, 0, 0.7)]  # High similarity for both levels
                     
                     result = categorizer._hierarchical_sem_search(
                         query="dog",
