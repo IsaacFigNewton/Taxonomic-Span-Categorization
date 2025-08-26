@@ -15,6 +15,8 @@ import spacy
 from spacy.tokens import Doc, Span
 
 from sentence_transformers import SentenceTransformer
+import torch
+from transformers import AutoTokenizer, AutoModel
 
 import tax_span_cat.taxonomies
 from .TaxonomyValidator import TaxonomyValidator
@@ -27,7 +29,7 @@ class SpanCategorizer:
                  embedding_model: str = "all-MiniLM-L6-v2",
                  taxonomy: Optional[Dict] = None,
                  taxonomy_path: Optional[str] = None,
-                 threshold: float = 0.001,
+                 threshold: float = 0.0,
                  taxonomic_features: List[str]|None = None,
                  preserve_existing_ents: bool = False):
         # taxonomic features to include in taxonomic embeddings
@@ -104,15 +106,130 @@ class SpanCategorizer:
             return self._load_taxonomy_from_path(self.default_taxonomy_path, iters=iters+1)
     
 
-    def _embed(self, text: str) -> np.ndarray:
-        # if it's a sentence_transformers embedding model
+    def _embed(self, text: str, context: str = None) -> np.ndarray:
+        """
+        Create contextual embeddings using attention-weighted combination of text and context.
+        
+        Args:
+            text: The primary text to embed (query)
+            context: Optional context to influence the embedding
+            
+        Returns:
+            Normalized embedding vector incorporating contextual information
+        """
+        if context and len(context.strip()) > 0:
+            return self._contextual_embed(text, context)
+        else:
+            return self._simple_embed(text)
+    
+    def _simple_embed(self, text: str) -> np.ndarray:
+        """Simple embedding without context"""
         if hasattr(self.embedding_model, 'encode'):
             embedding = self.embedding_model.encode([text])[0]
-        # if it's a spacy model
         else:
             embedding = self.embedding_model(text).vector
-
         return normalize(embedding.reshape(1, -1))[0]
+    
+    def _contextual_embed(self, text: str, context: str) -> np.ndarray:
+        """
+        Create contextual embedding using transformer cross-attention mechanisms.
+        
+        This approach:
+        1. Combines query and context as "[CLS] query [SEP] context [SEP]"
+        2. Uses transformer model to get hidden states with cross-attention
+        3. Extracts contextualized representations for query tokens only
+        4. Mean pools the query token representations
+        """
+        try:
+            # Check if we have a sentence-transformers model with underlying transformer
+            if not hasattr(self.embedding_model, '_modules') or not hasattr(self.embedding_model, 'tokenizer'):
+                # Fallback to simple weighted combination for non-transformer models
+                return self._contextual_embed_fallback(text, context)
+            
+            # Get the underlying transformer model and tokenizer
+            transformer_model = self.embedding_model._modules['0'].auto_model
+            tokenizer = self.embedding_model.tokenizer
+            
+            # Prepare input: [CLS] query [SEP] context [SEP]
+            combined_input = f"[CLS] {text} [SEP] {context} [SEP]"
+            
+            # Tokenize the combined input
+            inputs = tokenizer(combined_input, return_tensors='pt', padding=True, truncation=True, max_length=512)
+            
+            # Get token positions for the query (after [CLS], before first [SEP])
+            input_ids = inputs['input_ids'][0]
+            sep_positions = (input_ids == tokenizer.sep_token_id).nonzero(as_tuple=True)[0]
+            
+            if len(sep_positions) >= 1:
+                # Query tokens are between [CLS] (position 1) and first [SEP]
+                query_start = 1  # After [CLS]
+                query_end = sep_positions[0].item()  # Before first [SEP]
+            else:
+                # Fallback: use first half of tokens as query
+                total_tokens = len(input_ids)
+                query_start = 1
+                query_end = min(query_start + len(tokenizer.tokenize(text)), total_tokens - 1)
+            
+            # Get hidden states from transformer
+            with torch.no_grad():
+                outputs = transformer_model(**inputs, output_hidden_states=True)
+                hidden_states = outputs.hidden_states[-1]  # Last layer hidden states
+            
+            # Extract query token representations
+            query_hidden_states = hidden_states[0, query_start:query_end, :]  # Shape: [query_tokens, hidden_dim]
+            
+            if query_hidden_states.size(0) > 0:
+                # Mean pool the query token representations
+                contextual_embedding = torch.mean(query_hidden_states, dim=0).cpu().numpy()
+            else:
+                # Fallback if no query tokens found
+                return self._simple_embed(text)
+            
+            # Normalize the embedding
+            return normalize(contextual_embedding.reshape(1, -1))[0]
+            
+        except Exception as e:
+            # Fallback to simple weighted combination
+            print(f"Transformer contextual embedding failed: {e}, using fallback method")
+            return self._contextual_embed_fallback(text, context)
+    
+    def _contextual_embed_fallback(self, text: str, context: str) -> np.ndarray:
+        """
+        Fallback contextual embedding using attention-weighted combination.
+        Used when transformer-based approach is not available.
+        """
+        try:
+            # Get separate embeddings for text and context
+            text_emb = self._simple_embed(text)
+            context_emb = self._simple_embed(context)
+            
+            # Calculate attention weight based on semantic similarity
+            similarity = np.dot(text_emb, context_emb) / (
+                np.linalg.norm(text_emb) * np.linalg.norm(context_emb) + 1e-8
+            )
+            
+            # Convert similarity to attention weight [0, 1]
+            context_attention_weight = max(0.0, min(1.0, (similarity + 1) / 2))
+            
+            # Weighted combination: emphasize text but incorporate relevant context
+            text_weight = 0.7 + (1 - context_attention_weight) * 0.2  # 0.7 to 0.9
+            context_weight = 0.3 * context_attention_weight  # 0 to 0.3
+            
+            # Normalize weights
+            total_weight = text_weight + context_weight
+            if total_weight > 0:
+                text_weight /= total_weight
+                context_weight /= total_weight
+            
+            # Create weighted contextual embedding
+            contextual_embedding = text_weight * text_emb + context_weight * context_emb
+            
+            return normalize(contextual_embedding.reshape(1, -1))[0]
+            
+        except Exception as e:
+            # Ultimate fallback to simple embedding
+            print(f"Fallback contextual embedding failed: {e}, using simple embedding")
+            return self._simple_embed(text)
 
 
     def _embed_taxonomy(self, node: Dict | str) -> Dict[str, Dict]:
@@ -330,6 +447,7 @@ class SpanCategorizer:
         return "UNKNOWN"
 
     def _hierarchical_sem_search(self,
+            context: str,
             query: str,
             current_label: str,
             current_node: dict,
@@ -366,8 +484,8 @@ class SpanCategorizer:
         if not children:
             return self._extract_best_label(current_node, current_label)
             
-        # get query embedding
-        query_vect = self._embed(query)
+        # get query embedding with context
+        query_vect = self._embed(query, context=context)
         # get embeddings of taxonomic terms at the current level
         corpus_vects = []
         valid_children = []
@@ -405,6 +523,7 @@ class SpanCategorizer:
         if similarity_difference > adaptive_threshold:
             # Continue deeper into hierarchy
             return self._hierarchical_sem_search(
+                context=context,
                 query=query,
                 current_label=best_match_label,
                 current_node=best_match_node,
@@ -434,6 +553,7 @@ class SpanCategorizer:
         for chunk in doc.noun_chunks:
             # label the current chunk
             ent_label = self._hierarchical_sem_search(
+                context=doc.text,
                 query=chunk.text,
                 current_label="ENTITY",
                 current_node=self.taxonomy,
